@@ -134,7 +134,7 @@ sf::Packet &operator >> (sf::Packet &packet, SDR &sdr) {
 struct WeightSet {
     std::string _name;
     sf::Uint16 _radius;
-    std::vector<float> _weights;
+    std::vector<std::tuple<float, float, float>> _weights;
 };
 
 sf::Packet &operator >> (sf::Packet &packet, WeightSet &weightSet) {
@@ -144,8 +144,11 @@ sf::Packet &operator >> (sf::Packet &packet, WeightSet &weightSet) {
 
     weightSet._weights.resize(diam * diam);
 
-    for (int i = 0; i < weightSet._weights.size(); i++)
-        packet >> weightSet._weights[i];
+    float w1, w2, w3;
+    for (int i = 0; i < weightSet._weights.size(); i++) {
+        packet >> w1 >> w2 >> w3;
+        weightSet._weights[i] = std::make_tuple(w1, w2, w3);
+    }
 
     return packet;
 }
@@ -409,11 +412,15 @@ int main() {
                     for (int y = 0; y < wImg.getSize().y; y++) {
                         int index = x + y * wImg.getSize().x;
 
-                        float weight = network._weightSets[i]._weights[index];
+                        float w1 = std::get<0>(network._weightSets[i]._weights[index]);
+                        float w2 = std::get<1>(network._weightSets[i]._weights[index]);
+                        float w3 = std::get<2>(network._weightSets[i]._weights[index]);
 
-                        sf::Uint8 grey = std::min(1.0f, std::max(0.0f, weight)) * 255;
+                        sf::Uint8 g1 = std::min(1.0f, std::max(0.0f, w1)) * 255;
+                        sf::Uint8 g2 = std::min(1.0f, std::max(0.0f, w2)) * 255;
+                        sf::Uint8 g3 = std::min(1.0f, std::max(0.0f, w3)) * 255;
 
-                        wImg.setPixel(x, y, sf::Color(grey, grey, grey));
+                        wImg.setPixel(x, y, sf::Color(g1, g2, g3));
                     }
 
                 if (hovering) {
