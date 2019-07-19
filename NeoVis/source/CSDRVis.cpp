@@ -73,11 +73,11 @@ void CSDRVis::drawColumn(const sf::Vector2f &position, int index, bool isOdd) {
             int subIndex = x + y * _rootColumnSize;
 
             if (subIndex < _columnSize) {
-                outer.setPosition(position + sf::Vector2f(x * _nodeSpaceSize + _edgeRadius, y * _nodeSpaceSize + _edgeRadius));
+                outer.setPosition(position + sf::Vector2f(x * _nodeSpaceSize + _edgeRadius * 2.0f, y * _nodeSpaceSize + _edgeRadius * 2.0f));
 
                 _rt->draw(outer);
 
-                inner.setPosition(position + sf::Vector2f(x * _nodeSpaceSize + _edgeRadius, y * _nodeSpaceSize + _edgeRadius));
+                inner.setPosition(position + sf::Vector2f(x * _nodeSpaceSize + _edgeRadius * 2.0f, y * _nodeSpaceSize + _edgeRadius * 2.0f));
 
                 inner.setFillColor(sf::Color(_nodeInnerColor.r, _nodeInnerColor.g, _nodeInnerColor.b, subIndex == index ? 255 : 0));
 
