@@ -9,6 +9,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui-SFML.h"
 #include "imgui_extra.h"
+#include "CSDRVis.h"
 
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
@@ -115,96 +116,90 @@ void connectThreadFunc(sf::TcpSocket* socket) {
 }
 
 struct SDR {
-    sf::Uint16 _chunkSize;
-    sf::Uint16 _width, _height;
-    std::vector<sf::Uint16> _chunkIndices;
+    sf::Uint16 _width, _height, _columnSize;
+    std::vector<sf::Uint16> _indices;
 };
 
-sf::Packet &operator >> (sf::Packet &packet, SDR &sdr) {
-    packet >> sdr._chunkSize >> sdr._width >> sdr._height;
+// sf::Packet &operator >> (sf::Packet &packet, SDR &sdr) {
+//     packet >> sdr._width >> sdr._height >> sdr._columnSize;
 
-    sdr._chunkIndices.resize(sdr._width * sdr._height);
+//     sdr._indices.resize(sdr._width * sdr._height);
 
-    for (int i = 0; i < sdr._chunkIndices.size(); i++)
-        packet >> sdr._chunkIndices[i];
+//     for (int i = 0; i < sdr._indices.size(); i++)
+//         packet >> sdr._indices[i];
 
-    return packet;
-}
-
-struct WeightSet {
-    std::string _name;
-    sf::Uint16 _radius;
-    std::vector<std::tuple<float, float, float>> _weights;
-};
-
-sf::Packet &operator >> (sf::Packet &packet, WeightSet &weightSet) {
-    packet >> weightSet._name >> weightSet._radius;
-
-    sf::Uint16 diam = weightSet._radius * 2 + 1;
-
-    weightSet._weights.resize(diam * diam);
-
-    float w1, w2, w3;
-    for (int i = 0; i < weightSet._weights.size(); i++) {
-        packet >> w1 >> w2 >> w3;
-        weightSet._weights[i] = std::make_tuple(w1, w2, w3);
-    }
-
-    return packet;
-}
+//     return packet;
+// }
 
 struct Network {
     sf::Uint16 _numLayers;
-    sf::Uint16 _numWeightSets;
     std::vector<SDR> _sdrs;
-    std::vector<WeightSet> _weightSets;
+
+    Network()
+    : _numLayers(0)
+    {}
 };
 
-sf::Packet &operator >> (sf::Packet &packet, Network &network) {
-    packet >> network._numLayers >> network._numWeightSets;
+// sf::Packet &operator >> (sf::Packet &packet, Network &network) {
+//     packet >> network._numLayers;
 
-    network._sdrs.resize(network._numLayers);
+//     network._sdrs.resize(network._numLayers);
 
-    for (int i = 0; i < network._sdrs.size(); i++)
-        packet >> network._sdrs[i];
+//     for (int i = 0; i < network._sdrs.size(); i++)
+//         packet >> network._sdrs[i];
 
-    network._weightSets.resize(network._numWeightSets);
+//     return packet;
+// }
 
-    for (int i = 0; i < network._weightSets.size(); i++)
-        packet >> network._weightSets[i];
+// struct Caret {
+//     sf::Uint16 _layer;
+//     sf::Uint16 _bitIndex;
+// };
 
-    return packet;
-}
+// Caret caret;
 
-struct Caret {
-    sf::Uint16 _layer;
-    sf::Uint16 _bitIndex;
-};
-
-Caret caret;
-
-sf::Packet &operator << (sf::Packet &packet, const Caret &caret) {
-    return packet << caret._layer << caret._bitIndex;
-}
+// sf::Packet &operator << (sf::Packet &packet, const Caret &caret) {
+//     return packet << caret._layer << caret._bitIndex;
+// }
 
 Network bufferedNetwork;
 Network network;
 
 std::mutex receiveMutex;
 
+void recv(sf::TcpSocket* socket, char* data, int size) {
+    int numReceived = 0;
+
+    while (numReceived < size) {
+        size_t received;
+
+        socket->receive(&data[numReceived], size - numReceived, received);
+
+        numReceived += received;
+    }
+}
+
 void receiveThreadFunc(sf::TcpSocket* socket) {
     while (!stopReceiving) {
-        sf::Packet packet;
-
-        socket->receive(packet);
-
         {
             std::lock_guard<std::mutex> lock(receiveMutex);
 
-            packet >> bufferedNetwork;
+            recv(socket, reinterpret_cast<char*>(&bufferedNetwork._numLayers), sizeof(sf::Uint16));
+
+            bufferedNetwork._sdrs.resize(bufferedNetwork._numLayers);
+
+            for (int l = 0; l < bufferedNetwork._numLayers; l++) {
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._sdrs[l]._width), sizeof(sf::Uint16));
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._sdrs[l]._height), sizeof(sf::Uint16));
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._sdrs[l]._columnSize), sizeof(sf::Uint16));
+
+                bufferedNetwork._sdrs[l]._indices.resize(bufferedNetwork._sdrs[l]._width * bufferedNetwork._sdrs[l]._height);
+                
+                recv(socket, reinterpret_cast<char*>(bufferedNetwork._sdrs[l]._indices.data()), bufferedNetwork._sdrs[l]._indices.size() * sizeof(sf::Uint16));
+            }
         }
 
-        sf::sleep(sf::seconds(0.001f));
+        sf::sleep(sf::seconds(0.01f));
     }
 }
 
@@ -243,8 +238,7 @@ int main() {
     addressStr.resize(maxStr);
     portStr.resize(maxStr);
 
-    std::vector<sf::Texture> layerTextures;
-    std::vector<sf::Texture> weightSetTextures;
+    std::vector<CSDRVis> layerCSDRVis;
 
     sf::TcpSocket socket;
 
@@ -324,14 +318,15 @@ int main() {
                 connectionWizardOpen = false;
         }
 
-        // Retrieve network
-        if (connectionStatus == _connected) {
+        if (connectionStatus == _disconnected)
+            layerCSDRVis.clear();
+        else if (connectionStatus == _connected) {
             // Send Caret
-            sf::Packet packet;
+            // sf::Packet packet;
 
-            packet << caret;
+            // packet << caret;
 
-            socket.send(packet);
+            // socket.send(packet);
 
             {
                 std::lock_guard<std::mutex> lock(receiveMutex);
@@ -339,103 +334,29 @@ int main() {
                 network = bufferedNetwork;
             }
 
-            // Visualize content
-            layerTextures.resize(network._numLayers);
+            // Init
+            if (layerCSDRVis.empty()) {
+                layerCSDRVis.resize(network._numLayers);
 
+                for (int l = 0; l < network._numLayers; l++)
+                    layerCSDRVis[l].init(network._sdrs[l]._width, network._sdrs[l]._height, network._sdrs[l]._columnSize);
+            }
+
+            // Visualize content
             for (int l = 0; l < network._numLayers; l++) {
                 SDR &sdr = network._sdrs[l];
 
-                sf::Image sdrImg;
+                for (int i = 0; i < sdr._indices.size(); i++)
+                    layerCSDRVis[l][i] = sdr._indices[i];
 
-                sdrImg.create(sdr._width * sdr._chunkSize, sdr._height * sdr._chunkSize, sf::Color::Black);
+                layerCSDRVis[l].draw();
 
-                layerTextures[l].loadFromImage(sdrImg);
+                sf::Sprite sCSDRVis;
+                sCSDRVis.setTexture(layerCSDRVis[l].getTexture());
 
                 ImGui::Begin(("Layer " + std::to_string(l)).c_str());
 
-                bool hovering;
-                int hoverIndex;
-
-                ImGui::ImageHover(layerTextures[l], hovering, hoverIndex, ImVec2(4.0f * sdrImg.getSize().x, 4.0f * sdrImg.getSize().y));
-
-                if (hovering && sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
-                    caret._bitIndex = hoverIndex;
-                    caret._layer = l;
-                }
-    
-                int chunksInX = sdr._width;
-                int chunksInY = sdr._height;
-                
-                for (int cx = 0; cx < chunksInX; cx++)
-                    for (int cy = 0; cy < chunksInY; cy++) {
-                        int index = cx + cy * chunksInX;
-
-                        int dx = sdr._chunkIndices[index] % sdr._chunkSize;
-                        int dy = sdr._chunkIndices[index] / sdr._chunkSize;
-
-                        int x = cx * sdr._chunkSize + dx;
-                        int y = cy * sdr._chunkSize + dy;
-
-                        sdrImg.setPixel(x, y, sf::Color::White);
-                    }
-
-                if (hovering)
-                    sdrImg.setPixel(caret._bitIndex % sdrImg.getSize().x, caret._bitIndex / sdrImg.getSize().x, sf::Color::Green);
-
-                layerTextures[l].loadFromImage(sdrImg);
-
-                layerTextures[l].setSmooth(false);  
-
-                ImGui::End();
-            }
-
-            // Show contents of Caret position
-            weightSetTextures.resize(network._numWeightSets);
-
-            for (int i = 0; i < network._numWeightSets; i++) {
-                int diam = network._weightSets[i]._radius * 2 + 1;
-
-                sf::Image wImg;
-
-                wImg.create(diam, diam, sf::Color::Black);
-
-                weightSetTextures[i].loadFromImage(wImg);
-
-                ImGui::Begin(network._weightSets[i]._name.c_str());
-
-                bool hovering;
-                int hoverIndex;
-
-                ImGui::ImageHover(weightSetTextures[i], hovering, hoverIndex, ImVec2(4.0f * wImg.getSize().x, 4.0f * wImg.getSize().y));
-
-                for (int x = 0; x < wImg.getSize().x; x++)
-                    for (int y = 0; y < wImg.getSize().y; y++) {
-                        int index = x + y * wImg.getSize().x;
-
-                        float w1 = std::get<0>(network._weightSets[i]._weights[index]);
-                        float w2 = std::get<1>(network._weightSets[i]._weights[index]);
-                        float w3 = std::get<2>(network._weightSets[i]._weights[index]);
-
-                        sf::Uint8 g1 = std::min(1.0f, std::max(0.0f, w1)) * 255;
-                        sf::Uint8 g2 = std::min(1.0f, std::max(0.0f, w2)) * 255;
-                        sf::Uint8 g3 = std::min(1.0f, std::max(0.0f, w3)) * 255;
-
-                        wImg.setPixel(x, y, sf::Color(g1, g2, g3));
-                    }
-
-                if (hovering) {
-                    wImg.setPixel(hoverIndex % wImg.getSize().x, hoverIndex / wImg.getSize().x, sf::Color::Green);
-
-                    /*ImGui::BeginTooltip();
-
-                    ImGui::SetTooltip("Eerwer");
-
-                    ImGui::EndTooltip();*/
-                }
-
-                weightSetTextures[i].loadFromImage(wImg);
-
-                weightSetTextures[i].setSmooth(false);
+                ImGui::Image(sCSDRVis);
 
                 ImGui::End();
             }
