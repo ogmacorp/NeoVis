@@ -165,27 +165,28 @@ struct Network {
 Network bufferedNetwork;
 Network network;
 
-std::mutex receiveMutex;
-
-void recv(sf::TcpSocket* socket, char* data, int size) {
+bool recv(sf::TcpSocket* socket, char* data, int size) {
     int numReceived = 0;
 
     while (numReceived < size) {
         size_t received;
 
-        socket->receive(&data[numReceived], size - numReceived, received);
+        sf::Socket::Status s = socket->receive(&data[numReceived], size - numReceived, received);
 
+        if (s != sf::Socket::Status::Done) {
+            connectionStatus = _disconnected;
+            return false;
+        }
+            
         numReceived += received;
     }
+
+    return true;
 }
 
 void receiveThreadFunc(sf::TcpSocket* socket) {
     while (!stopReceiving) {
-        {
-            std::lock_guard<std::mutex> lock(receiveMutex);
-
-            recv(socket, reinterpret_cast<char*>(&bufferedNetwork._numLayers), sizeof(sf::Uint16));
-
+        if (recv(socket, reinterpret_cast<char*>(&bufferedNetwork._numLayers), sizeof(sf::Uint16))) {
             bufferedNetwork._sdrs.resize(bufferedNetwork._numLayers);
 
             for (int l = 0; l < bufferedNetwork._numLayers; l++) {
@@ -198,8 +199,6 @@ void receiveThreadFunc(sf::TcpSocket* socket) {
                 recv(socket, reinterpret_cast<char*>(bufferedNetwork._sdrs[l]._indices.data()), bufferedNetwork._sdrs[l]._indices.size() * sizeof(sf::Uint16));
             }
         }
-
-        sf::sleep(sf::seconds(0.01f));
     }
 }
 
@@ -328,11 +327,7 @@ int main() {
 
             // socket.send(packet);
 
-            {
-                std::lock_guard<std::mutex> lock(receiveMutex);
-
-                network = bufferedNetwork;
-            }
+            network = bufferedNetwork;
 
             // Init
             if (layerCSDRVis.empty()) {
@@ -381,14 +376,20 @@ int main() {
         window.display();
     }
 
+    std:: cout << "Stopping receiving..." << std::endl;
+
     if (receiveThread != nullptr) {
         socket.disconnect();
 
         endReceiving();
     }
 
+    std:: cout << "Stopping connections..." << std::endl;
+
     if (connectThread != nullptr)
         connectThread->join();
 
     ImGui::SFML::Shutdown();
+
+    std:: cout << "Bye!" << std::endl;
 }
