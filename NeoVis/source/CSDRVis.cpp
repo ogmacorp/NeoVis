@@ -96,7 +96,7 @@ void CSDRVis::draw() {
 
 	for (int x = 0; x < _width; x++)
 		for (int y = 0; y < _height; y++)
-            drawColumn(sf::Vector2f(x * rSize, y * rSize), at(x, y), (x + y * _width) % 2 == y % 2);
+            drawColumn(sf::Vector2f(x * rSize, y * rSize), at(x, y), x % 2 != y % 2);
 
     _rt->display();
 }
