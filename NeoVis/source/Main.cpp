@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  NeoVis
-//  Copyright(c) 2017 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2017-2019 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of NeoVis is licensed to you under the terms described
 //  in the NEOVIS_LICENSE.md file included in this distribution.
@@ -120,17 +120,6 @@ struct SDR {
     std::vector<sf::Uint16> _indices;
 };
 
-// sf::Packet &operator >> (sf::Packet &packet, SDR &sdr) {
-//     packet >> sdr._width >> sdr._height >> sdr._columnSize;
-
-//     sdr._indices.resize(sdr._width * sdr._height);
-
-//     for (int i = 0; i < sdr._indices.size(); i++)
-//         packet >> sdr._indices[i];
-
-//     return packet;
-// }
-
 struct Network {
     sf::Uint16 _numLayers;
     std::vector<SDR> _sdrs;
@@ -139,28 +128,6 @@ struct Network {
     : _numLayers(0)
     {}
 };
-
-// sf::Packet &operator >> (sf::Packet &packet, Network &network) {
-//     packet >> network._numLayers;
-
-//     network._sdrs.resize(network._numLayers);
-
-//     for (int i = 0; i < network._sdrs.size(); i++)
-//         packet >> network._sdrs[i];
-
-//     return packet;
-// }
-
-// struct Caret {
-//     sf::Uint16 _layer;
-//     sf::Uint16 _bitIndex;
-// };
-
-// Caret caret;
-
-// sf::Packet &operator << (sf::Packet &packet, const Caret &caret) {
-//     return packet << caret._layer << caret._bitIndex;
-// }
 
 Network bufferedNetwork;
 Network network;

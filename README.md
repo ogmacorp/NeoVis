@@ -1,6 +1,6 @@
 <!---
   NeoVis
-  Copyright(c) 2017 Ogma Intelligent Systems Corp. All rights reserved.
+  Copyright(c) 2017-2019 Ogma Intelligent Systems Corp. All rights reserved.
 
   This copy of NeoVis is licensed to you under the terms described
   in the NEOVIS_LICENSE.md file included in this distribution.
@@ -10,11 +10,13 @@
 
 [![Join the chat at https://gitter.im/ogmaneo/Lobby](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/ogmaneo/Lobby)
 
-NeoVis is a visualizer for [EOgmaNeo](https://github.com/ogmacorp/EOgmaNeo) hierarchies, built using 'dear imgui' (AKA [ImGui](https://github.com/ocornut/imgui)) and the Simple and Fast Multimedia Library (AKA [SFML](https://www.sfml-dev.org/)).
+**New! Now works with [OgmaNeo2](https://github.com/ogmacorp/OgmaNeo2) (through [PyOgmaNeo2](https://github.com/ogmacorp/PyOgmaNeo2.git))!**
+
+NeoVis is a visualizer for [OgmaNeo2](https://github.com/ogmacorp/OgmaNeo2) (using the Python interface, [PyOgmaNeo2](https://github.com/ogmacorp/PyOgmaNeo2.git)) hierarchies, built using 'dear imgui' (AKA [ImGui](https://github.com/ocornut/imgui)) and the Simple and Fast Multimedia Library (AKA [SFML](https://www.sfml-dev.org/)).
 
 ## Overview
 
-NeoVis is an application that allows one to visualize in real-time the contents of an EOgmaNeo hierarchy. It uses sockets to communicate with the client program. It can be connected and disconnected seamlessly, provided the client code contains the appropriate visualization update function.
+NeoVis is an application that allows one to visualize in real-time the contents of an OgmaNeo2 hierarchy. It uses sockets to communicate with the client program. It can be connected and disconnected seamlessly, provided the client code contains the appropriate visualization update function.
 
 ## Building
 
@@ -35,38 +37,40 @@ Version 3.1, and upwards, of [CMake](https://cmake.org/) is the required version
 
 ## Client code
 
-Make sure to compile EOgmaNeo with the optional SFML dependency, as this will enable the ability to use the visualizer.
-
-Example usage from EOgmaNeo Python bindings (C++ and other bindings are similar):
+Include visadapter/VisAdapter.py into your Python code by whichever method you prefer. Then:
 
 ```python
-# Initialize and construct an EOgmaNeo hierarchy, for example
-h = eogmaneo.Hierarchy()
+import visadapter
 
-h.create([ ( chunkSize, chunkSize) ], [ chunkSize ], [ True ], lds, 123)
+# ...
+
+h = pyogmaneo.Hierarchy()
+
+# ...
 
 # Initialize the VisAdapter
-v = eogmaneo.VisAdapter()
+v = visadapter.VisAdapter()
 
-v.create(h, 54000) # EOgmaNeo Hierarchy, port
+v.create(54000) # Port
 
 # ...
 
 # In simulation loop:
-v.update()
+v.update(h)
+
 ```
 
 ## Host operation
 
 Once NeoVis is started, use the `Connection` button and `Connection Wizard` dialog box to open a connection to your hierarchy. Simply specify the address (localhost, if on same machine) of the client, and make sure that both applications are using the same port (default 54000). Once `Connect!` button has been pressed, and the status switches to "Connected", you should see several windows appear.
 
-Each layer has a window for its hidden layer SDR (Sparse Distributed Representation). If you right-click on a particular unit in the SDR (highlighted in green), additional windows containing the weight matrices going in and out of that unit will appear.
+Each layer has a window for its hidden layer CSDR (Sparse Distributed Representation).
 
-At the moment, SDR and weight matrix visualization are the only features of NeoVis. Despite this, we found it quite handy for debugging our programs. If your application isn't functioning properly, it may be a good idea to pear into the network with NeoVis!
+At the moment, CSDR visualization is the only feature of NeoVis. Despite this, we found it quite handy for debugging our programs. If your application isn't functioning properly, it may be a good idea to pear into the network with NeoVis!
 
 ## Note
 
-Please note that the visualizer only works with simulation-like environments. It assumes that the client is running in real-time, and it streams whatever the latest state is for visualization. This makes is particularly handy for visualizing the EOgmaNeo hierarchy during reinforcement-learning-like tasks and other realtime applications.
+Please note that the visualizer only works with simulation-like environments. It assumes that the client is running in real-time, and it streams whatever the latest state is for visualization. This makes is particularly handy for visualizing the OgmaNeo2 hierarchy during reinforcement-learning-like tasks and other realtime applications.
 
 ## Contributions
 
@@ -81,4 +85,4 @@ SFML license https://github.com/SFML/SFML/blob/master/license.md
 
 Contact Ogma via licenses@ogmacorp.com to discuss commercial use and licensing options.
 
-NeoVis Copyright (c) 2017 [Ogma Intelligent Systems Corp](https://ogmacorp.com). All rights reserved.
+NeoVis Copyright (c) 2017-2019 [Ogma Intelligent Systems Corp](https://ogmacorp.com). All rights reserved.

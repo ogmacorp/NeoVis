@@ -39,7 +39,7 @@ Please don't spend weeks or months on a new feature without checking with us fir
 
 Some contributions are troublesome and therefore difficult to accept:
 
- * New features that require a new version of the OgmaNeo and/or EOgmaNeo library, and Flatbuffers schemas<br/>
+ * New features that require a new version of the OgmaNeo library, and Flatbuffers schemas<br/>
 
  * New features that may be useful for your project but are not obviously useful to other projects<br/>
    We want to keep our software lean and focused!
