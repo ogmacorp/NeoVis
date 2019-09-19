@@ -115,14 +115,32 @@ void connectThreadFunc(sf::TcpSocket* socket) {
     }
 }
 
+struct Caret {
+    sf::Uint16 _layer;
+    sf::Vector3i _pos;
+
+    Caret()
+    : _layer(0),
+    _pos(-1, -1, -1)
+    {}
+};
+
 struct SDR {
     sf::Uint16 _width, _height, _columnSize;
     std::vector<sf::Uint16> _indices;
 };
 
+struct Field {
+    std::array<char, 32> _name;
+    sf::Vector3i _fieldSize;
+    std::vector<float> _field;
+};
+
 struct Network {
     sf::Uint16 _numLayers;
     std::vector<SDR> _sdrs;
+
+    std::vector<Field> _fields;
 
     Network()
     : _numLayers(0)
@@ -131,6 +149,7 @@ struct Network {
 
 Network bufferedNetwork;
 Network network;
+Caret caret;
 
 bool recv(sf::TcpSocket* socket, char* data, int size) {
     int numReceived = 0;
@@ -164,6 +183,22 @@ void receiveThreadFunc(sf::TcpSocket* socket) {
                 bufferedNetwork._sdrs[l]._indices.resize(bufferedNetwork._sdrs[l]._width * bufferedNetwork._sdrs[l]._height);
                 
                 recv(socket, reinterpret_cast<char*>(bufferedNetwork._sdrs[l]._indices.data()), bufferedNetwork._sdrs[l]._indices.size() * sizeof(sf::Uint16));
+            }
+
+            // Number of fields
+            sf::Uint16 numFields;
+
+            recv(socket, reinterpret_cast<char*>(&numFields), sizeof(sf::Uint16));
+            
+            bufferedNetwork._fields.resize(numFields);
+
+            for (int f = 0; f < numFields; f++) {
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._fields[f]._name), sizeof(bufferedNetwork._fields[f]._name));
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._fields[f]._fieldSize), sizeof(sf::Vector3i));
+                int totalSize = bufferedNetwork._fields[f]._fieldSize.x * bufferedNetwork._fields[f]._fieldSize.y * bufferedNetwork._fields[f]._fieldSize.z;
+
+                bufferedNetwork._fields[f]._field.resize(totalSize);
+                recv(socket, reinterpret_cast<char*>(bufferedNetwork._fields[f]._field.data()), bufferedNetwork._fields[f]._field.size() * sizeof(float));
             }
         }
     }
@@ -205,6 +240,8 @@ int main() {
     portStr.resize(maxStr);
 
     std::vector<CSDRVis> layerCSDRVis;
+    std::vector<sf::Texture> fieldTextures;
+    std::vector<int> fieldZs;
 
     sf::TcpSocket socket;
 
@@ -215,11 +252,20 @@ int main() {
     while (window.isOpen()) {
         sf::Event event;
 
+        int mouseWheelDelta = 0;
+
         while (window.pollEvent(event)) {
             ImGui::SFML::ProcessEvent(event);
 
-            if (event.type == sf::Event::Closed)
-                window.close();
+            switch (event.type) {
+                case sf::Event::Closed:
+                    window.close();
+                    break;
+
+                case sf::Event::MouseWheelMoved:
+                    mouseWheelDelta = event.mouseWheel.delta;
+                    break;
+            }
         }
 
         ImGui::SFML::Update(window, deltaClock.restart());
@@ -284,15 +330,13 @@ int main() {
                 connectionWizardOpen = false;
         }
 
-        if (connectionStatus == _disconnected)
+        if (connectionStatus == _disconnected) {
             layerCSDRVis.clear();
+            fieldTextures.clear();
+        }
         else if (connectionStatus == _connected) {
             // Send Caret
-            // sf::Packet packet;
-
-            // packet << caret;
-
-            // socket.send(packet);
+            socket.send(reinterpret_cast<char*>(&caret), sizeof(Caret));
 
             network = bufferedNetwork;
 
@@ -313,12 +357,73 @@ int main() {
 
                 layerCSDRVis[l].draw();
 
-                sf::Sprite sCSDRVis;
-                sCSDRVis.setTexture(layerCSDRVis[l].getTexture());
-
                 ImGui::Begin(("Layer " + std::to_string(l)).c_str());
 
-                ImGui::Image(sCSDRVis);
+                bool hovering;
+                int hoverX = -1;
+                int hoverY = -1;
+
+                ImGui::ImageHover(layerCSDRVis[l].getTexture(), hovering, hoverX, hoverY, ImVec2(layerCSDRVis[l].getTexture().getSize().x, layerCSDRVis[l].getTexture().getSize().y));
+
+                if (hovering && sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
+                    // Divide by size
+                    layerCSDRVis[l]._highlightX = static_cast<int>(hoverX / layerCSDRVis[l]._nodeSpaceSize);
+                    layerCSDRVis[l]._highlightY = layerCSDRVis[l].getSizeInNodes().y - static_cast<int>(hoverY / layerCSDRVis[l]._nodeSpaceSize + 1.0f);
+
+                    caret._pos = layerCSDRVis[l].getHighlightedCSDRPos();
+                    caret._layer = l;
+                }
+    
+                ImGui::End();
+            }
+
+            // Show contents of caret position
+            fieldTextures.resize(network._fields.size());
+            fieldZs.resize(network._fields.size(), 0);
+
+            for (int i = 0; i < network._fields.size(); i++) {
+                sf::Vector3i fieldSize = network._fields[i]._fieldSize;
+
+                // Make sure is in range
+                fieldZs[i] = std::min(network._fields[i]._fieldSize.z - 1, std::max(0, fieldZs[i]));
+
+                sf::Image wImg;
+
+                wImg.create(fieldSize.x, fieldSize.y, sf::Color::Black);
+
+                for (int x = 0; x < wImg.getSize().x; x++)
+                    for (int y = 0; y < wImg.getSize().y; y++) {
+                        int index = fieldZs[i] + y * network._fields[i]._fieldSize.z + x * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
+
+                        float value = network._fields[i]._field[index];
+
+                        sf::Uint8 g = std::min(1.0f, std::max(0.0f, value)) * 255;
+
+                        wImg.setPixel(x, y, sf::Color(g, g, g));
+                    }
+
+                fieldTextures[i].loadFromImage(wImg);
+
+                fieldTextures[i].setSmooth(false);
+
+                std::string name = network._fields[i]._name.data();
+
+                ImGui::Begin(name.c_str());
+
+                bool hovering;
+                int hoverX = -1;
+                int hoverY = -1;
+
+                ImGui::ImageHover(fieldTextures[i], hovering, hoverX, hoverY, ImVec2(8.0f * wImg.getSize().x, 8.0f * wImg.getSize().y));
+
+                if (hovering) {
+                    // Select field Z
+                    fieldZs[i] = std::min(network._fields[i]._fieldSize.z - 1, std::max(0, fieldZs[i] + mouseWheelDelta));
+
+                    ImGui::BeginTooltip();
+                    ImGui::SetTooltip(("Z: " + std::to_string(fieldZs[i])).c_str());
+                    ImGui::EndTooltip();
+                }
 
                 ImGui::End();
             }

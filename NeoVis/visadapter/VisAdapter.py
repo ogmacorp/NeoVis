@@ -12,6 +12,7 @@ import struct
 import sys
 import threading
 import pyogmaneo
+from pyogmaneo import PyInt3
 
 class VisAdapter:
     def __init__(self, port=54000):
@@ -28,6 +29,8 @@ class VisAdapter:
         self.listen_thread.start()
 
         self.clients = []
+
+        self.caret = None
 
     def listen(self):
         while not self.stop:
@@ -68,9 +71,21 @@ class VisAdapter:
 
                 print("A client disconnected.")
 
-            if ready:    
+            if ready:
                 if len(ready_to_read) > 0:
-                    pass
+                    try:
+                        b = bytearray()
+                        
+                        while len(b) < 16:
+                            b += conn.recv(16 - len(b))
+
+                        self.caret = struct.unpack("Hiii", b)
+                    except Exception:
+                        conn.close()
+
+                        print("Corrupted carret.")
+
+                        ready = False
 
                 if len(ready_to_write) > 0:
                     # Send data
@@ -81,7 +96,7 @@ class VisAdapter:
                     b += struct.pack("H", int(num_layers))
 
                     for l in range(num_layers):
-                        bsdr = bytearray()
+                        blayer = bytearray()
 
                         size = h.getHiddenSize(l)
 
@@ -89,14 +104,54 @@ class VisAdapter:
                         height = size.y
                         column_size = size.z
 
-                        b += struct.pack("HHH", int(width), int(height), int(column_size))
+                        blayer += struct.pack("HHH", int(width), int(height), int(column_size))
 
                         sdr = list(h.getHiddenCs(l))
 
                         for i in range(width * height):
-                            bsdr += struct.pack("H", sdr[i])
+                            blayer += struct.pack("H", sdr[i])
 
-                        b += bsdr
+                        b += blayer
+
+                    assert(self.caret is None or (self.caret[0] >= 0 and self.caret[0] < h.getNumLayers()))
+                    
+                    num_fields = 0
+
+                    if self.caret is not None:
+                        layerIndex = int(self.caret[0])
+                    
+                        pos = PyInt3(*self.caret[1:4])
+
+                        inBounds = pos.x >= 0 and pos.y >= 0 and pos.z >= 0 and pos.x < h.getHiddenSize(layerIndex).x and pos.y < h.getHiddenSize(layerIndex).y and pos.z < h.getHiddenSize(layerIndex).z
+
+                        num_fields = 0 if not inBounds else h.getNumVisibleLayers(layerIndex)
+                    
+                    b += struct.pack("H", num_fields)
+
+                    for f in range(num_fields):
+                        bfield = bytearray()
+                        
+                        name = "field" + str(f)
+
+                        bname = name.encode()
+
+                        while len(bname) < 32:
+                            bname += struct.pack("c", b"\0")
+
+                        bfield += bname
+
+                        field = pyogmaneo.StdVecf()
+                        fieldSize = pyogmaneo.PyInt3()
+                        
+                        h.getSCReceptiveField(l, f, pos, field, fieldSize)
+                        fs = ( fieldSize.x, fieldSize.y, fieldSize.z )
+                        
+                        bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
+
+                        for i in range(fieldSize.x * fieldSize.y * fieldSize.z):
+                            bfield += struct.pack("f", field[i])
+
+                        b += bfield
 
                     try:
                         conn.send(b)

@@ -8,7 +8,7 @@
 
 #include "CSDRVis.h"
 #include <cmath>
-
+#include <iostream>
 void CSDRVis::init(int width, int height, int columnSize) {
 	_width = width;
 	_height = height;
@@ -25,7 +25,7 @@ void CSDRVis::init(int width, int height, int columnSize) {
     _rt->create(static_cast<int>(std::ceil(width * rSize)), static_cast<int>(std::ceil(height * rSize)));
 }
 
-void CSDRVis::drawColumn(const sf::Vector2f &position, int index, bool isOdd) {
+void CSDRVis::drawColumn(const sf::Vector2f &position, int index, bool isOdd, int cx, int cy) {
     float rSize = _nodeSpaceSize * _rootColumnSize;
 
     sf::Color backgroundColor = isOdd ? _backgroundColor1 : _backgroundColor0;
@@ -73,7 +73,7 @@ void CSDRVis::drawColumn(const sf::Vector2f &position, int index, bool isOdd) {
 	sf::CircleShape inner;
 	inner.setRadius(_nodeSpaceSize * _nodeOuterRatio * _nodeInnerRatio * 0.5f);
 	inner.setPointCount(_nodeInnerSegments);
-	inner.setFillColor(_nodeInnerColor);
+	//inner.setFillColor(_nodeInnerColor);
 	inner.setOrigin(sf::Vector2f(inner.getRadius(), inner.getRadius()));
 
 	for (int x = 0; x < _rootColumnSize; x++)
@@ -87,7 +87,20 @@ void CSDRVis::drawColumn(const sf::Vector2f &position, int index, bool isOdd) {
 
                 inner.setPosition(position + sf::Vector2f(x * _nodeSpaceSize + _edgeRadius * 2.0f, y * _nodeSpaceSize + _edgeRadius * 2.0f));
 
-                inner.setFillColor(sf::Color(_nodeInnerColor.r, _nodeInnerColor.g, _nodeInnerColor.b, subIndex == index ? 255 : 0));
+				int tx = cx * _rootColumnSize + x;
+				int ty = cy * _rootColumnSize + y;
+
+				bool highlight = (tx == _highlightX && ty == _highlightY);
+
+				if (highlight) {
+					_highlightedCSDRPos.x = cx;
+					_highlightedCSDRPos.y = cy;
+					_highlightedCSDRPos.z = subIndex;
+				}
+
+				sf::Color nodeInnerColor = highlight ? _nodeInnerColorHighlight : _nodeInnerColor;
+	
+                inner.setFillColor(sf::Color(nodeInnerColor.r, nodeInnerColor.g, nodeInnerColor.b, subIndex == index || highlight ? 255 : 0));
 
                 _rt->draw(inner);
             }
@@ -104,7 +117,7 @@ void CSDRVis::draw() {
 
 	for (int x = 0; x < _width; x++)
 		for (int y = 0; y < _height; y++)
-            drawColumn(sf::Vector2f(x * rSize, y * rSize), at(x, y), x % 2 != y % 2);
+            drawColumn(sf::Vector2f(x * rSize, y * rSize), at(x, y), x % 2 != y % 2, x, y);
 
     _rt->display();
 }

@@ -10,7 +10,7 @@
 
 using namespace ImGui;
 
-void ImGui::ImageHover(sf::Texture &tex, bool &hovering, int &hoverIndex, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col) {
+void ImGui::ImageHover(const sf::Texture &tex, bool &hovering, int &hoverX, int &hoverY, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col) {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
@@ -39,12 +39,10 @@ void ImGui::ImageHover(sf::Texture &tex, bool &hovering, int &hoverIndex, const 
     if (hovering) {
         ImVec2 bbSize = bb.GetSize();
 
-        float ratioX = (mousePos.x - bb.Min.x) / bbSize.x;
-        float ratioY = (mousePos.y - bb.Min.y) / bbSize.y;
+        float ratioX = (mousePos.x - bb.Min.x) / static_cast<float>(bbSize.x);
+        float ratioY = (mousePos.y - bb.Min.y) / static_cast<float>(bbSize.y);
 
-        int bitX = static_cast<int>(ratioX * tex.getSize().x);
-        int bitY = static_cast<int>(ratioY * tex.getSize().y);
-
-        hoverIndex = bitX + bitY * tex.getSize().x;
+        hoverX = static_cast<int>(ratioX * tex.getSize().x);
+        hoverY = static_cast<int>(ratioY * tex.getSize().y);
     }
 }

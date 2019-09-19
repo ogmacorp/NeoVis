@@ -22,7 +22,9 @@ private:
     int _width, _height, _columnSize;
     int _rootColumnSize;
 
-    void drawColumn(const sf::Vector2f &position, int index, bool isOdd);
+    void drawColumn(const sf::Vector2f &position, int index, bool isOdd, int cx, int cy);
+
+    sf::Vector3i _highlightedCSDRPos;
 
 public:
     float _edgeRadius;
@@ -39,10 +41,17 @@ public:
     sf::Color _nodeOuterColor;
     sf::Color _nodeInnerColor;
 
+    sf::Color _nodeInnerColorHighlight;
+
+    int _highlightX, _highlightY;
+
     CSDRVis()
         : _edgeRadius(4.0f), _nodeSpaceSize(16.0f), _nodeOuterRatio(0.85f), _nodeInnerRatio(0.75f),
         _edgeSegments(16), _nodeOuterSegments(16), _nodeInnerSegments(16),
-        _backgroundColor0(98, 98, 98), _backgroundColor1(168, 168, 168), _nodeOuterColor(64, 64, 64), _nodeInnerColor(255, 0, 0)
+        _backgroundColor0(98, 98, 98), _backgroundColor1(168, 168, 168), _nodeOuterColor(64, 64, 64), _nodeInnerColor(255, 0, 0),
+        _nodeInnerColorHighlight(0, 255, 0),
+        _highlightX(-1), _highlightY(-1),
+        _highlightedCSDRPos(-1, -1, -1)
     {}
 
     void init(int width, int height, int columnSize);
@@ -57,7 +66,15 @@ public:
 
     void draw();
 
+    sf::Vector2i getSizeInNodes() const {
+        return sf::Vector2i(_width * _rootColumnSize, _height * _rootColumnSize);
+    }
+
     const sf::Texture &getTexture() const {
         return _rt->getTexture();
+    }
+
+    const sf::Vector3i &getHighlightedCSDRPos() const {
+        return _highlightedCSDRPos;
     }
 };
