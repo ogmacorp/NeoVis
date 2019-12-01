@@ -134,7 +134,7 @@ class VisAdapter:
 
                         b += blayer
 
-                    assert(self.caret is None or (self.caret[0] >= 0 and self.caret[0] < h.getNumLayers()))
+                    assert(self.caret is None or (self.caret[0] >= 0 and self.caret[0] < h.getNumLayers() + num_encs))
                     
                     num_fields = 0
                     layerIndex = 0
