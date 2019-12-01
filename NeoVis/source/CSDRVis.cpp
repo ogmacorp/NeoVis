@@ -8,7 +8,7 @@
 
 #include "CSDRVis.h"
 #include <cmath>
-#include <iostream>
+
 void CSDRVis::init(int width, int height, int columnSize) {
 	_width = width;
 	_height = height;

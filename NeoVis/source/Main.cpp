@@ -361,7 +361,7 @@ int main() {
                 layerCSDRVis[l].draw();
 
                 if (l < network._numEncs)
-                    ImGui::Begin(("Encoder " + std::to_string(l)).c_str());
+                    ImGui::Begin(("Pre-encoder " + std::to_string(l)).c_str());
                 else
                     ImGui::Begin(("Layer " + std::to_string(l - network._numEncs)).c_str());
 
@@ -409,9 +409,7 @@ int main() {
 
                         float value = network._fields[i]._field[index];
 
-                        if (caret._layer < network._numEncs)
-                            value = std::tanh(value) * 0.5f + 0.5f; // Transform for image encoder
-                        else
+                        if (caret._layer >= network._numEncs)
                             value = std::exp(value); // Transform for ESE encoder
 
                         sf::Uint8 g = std::min(1.0f, std::max(0.0f, value)) * 255;
