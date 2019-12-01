@@ -365,13 +365,19 @@ int main() {
 
                 ImGui::ImageHover(layerCSDRVis[l].getTexture(), hovering, hoverX, hoverY, ImVec2(layerCSDRVis[l].getTexture().getSize().x, layerCSDRVis[l].getTexture().getSize().y));
 
-                if (hovering && sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
-                    // Divide by size
-                    layerCSDRVis[l]._highlightX = static_cast<int>(hoverX / layerCSDRVis[l]._nodeSpaceSize);
-                    layerCSDRVis[l]._highlightY = layerCSDRVis[l].getSizeInNodes().y - static_cast<int>(hoverY / layerCSDRVis[l]._nodeSpaceSize + 1.0f);
+                if (hovering) {
+                    if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
+                        // Divide by size
+                        layerCSDRVis[l]._highlightX = static_cast<int>(hoverX / layerCSDRVis[l]._nodeSpaceSize);
+                        layerCSDRVis[l]._highlightY = layerCSDRVis[l].getSizeInNodes().y - static_cast<int>(hoverY / layerCSDRVis[l]._nodeSpaceSize + 1.0f);
 
-                    caret._pos = layerCSDRVis[l].getHighlightedCSDRPos();
-                    caret._layer = l;
+                        caret._pos = layerCSDRVis[l].getHighlightedCSDRPos();
+                        caret._layer = l;
+                    }
+                }
+                else {
+                    layerCSDRVis[l]._highlightX = -1;
+                    layerCSDRVis[l]._highlightY = -1;
                 }
     
                 ImGui::End();
@@ -396,6 +402,8 @@ int main() {
                         int index = fieldZs[i] + y * network._fields[i]._fieldSize.z + x * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
 
                         float value = network._fields[i]._field[index];
+
+                        value = std::exp(value); // Transform for ESE encoder
 
                         sf::Uint8 g = std::min(1.0f, std::max(0.0f, value)) * 255;
 

@@ -54,7 +54,7 @@ class VisAdapter:
         self.listener.shutdown(2)
         self.listener.close()
 
-    def update(self, h: pyogmaneo.PyHierarchy):
+    def update(self, cs: pyogmaneo.PyComputeSystem, h: pyogmaneo.PyHierarchy):
         new_clients = []
         
         for client in self.clients:
@@ -106,7 +106,7 @@ class VisAdapter:
 
                         blayer += struct.pack("HHH", int(width), int(height), int(column_size))
 
-                        sdr = list(h.getHiddenCs(l))
+                        sdr = list(h.getHiddenCs(l).read(cs))
 
                         for i in range(width * height):
                             blayer += struct.pack("H", sdr[i])
@@ -124,7 +124,7 @@ class VisAdapter:
 
                         inBounds = pos.x >= 0 and pos.y >= 0 and pos.z >= 0 and pos.x < h.getHiddenSize(layerIndex).x and pos.y < h.getHiddenSize(layerIndex).y and pos.z < h.getHiddenSize(layerIndex).z
 
-                        num_fields = 0 if not inBounds else h.getNumVisibleLayers(layerIndex)
+                        num_fields = 0 if not inBounds else h.getNumSCVisibleLayers(layerIndex)
                     
                     b += struct.pack("H", num_fields)
 
@@ -140,10 +140,9 @@ class VisAdapter:
 
                         bfield += bname
 
-                        field = pyogmaneo.StdVecf()
                         fieldSize = pyogmaneo.PyInt3()
                         
-                        h.getSCReceptiveField(l, f, pos, field, fieldSize)
+                        field = h.getSCReceptiveField(cs, l, f, pos, fieldSize)
                         fs = ( fieldSize.x, fieldSize.y, fieldSize.z )
                         
                         bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
