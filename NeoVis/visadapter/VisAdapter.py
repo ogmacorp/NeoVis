@@ -116,6 +116,7 @@ class VisAdapter:
                     assert(self.caret is None or (self.caret[0] >= 0 and self.caret[0] < h.getNumLayers()))
                     
                     num_fields = 0
+                    layerIndex = 0
 
                     if self.caret is not None:
                         layerIndex = int(self.caret[0])
@@ -141,8 +142,8 @@ class VisAdapter:
                         bfield += bname
 
                         fieldSize = pyogmaneo.PyInt3()
-                        
-                        field = h.getSCReceptiveField(cs, l, f, pos, fieldSize)
+
+                        field = h.getSCReceptiveField(cs, layerIndex, f, pos, fieldSize)
                         fs = ( fieldSize.x, fieldSize.y, fieldSize.z )
                         
                         bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
