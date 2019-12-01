@@ -54,7 +54,7 @@ class VisAdapter:
         self.listener.shutdown(2)
         self.listener.close()
 
-    def update(self, cs: pyogmaneo.PyComputeSystem, h: pyogmaneo.PyHierarchy):
+    def update(self, cs: pyogmaneo.PyComputeSystem, h: pyogmaneo.PyHierarchy, encs: [ pyogmaneo.PyImageEncoder ]):
         new_clients = []
         
         for client in self.clients:
@@ -90,10 +90,31 @@ class VisAdapter:
                 if len(ready_to_write) > 0:
                     # Send data
                     num_layers = h.getNumLayers()
+                    num_encs = len(encs)
 
                     b = bytearray()
 
-                    b += struct.pack("H", int(num_layers))
+                    b += struct.pack("H", int(num_layers + num_encs))
+                    b += struct.pack("H", int(num_encs))
+
+                    # Add encoders
+                    for l in range(num_encs):
+                        blayer = bytearray()
+
+                        size = encs[l].getHiddenSize()
+
+                        width = size.x
+                        height = size.y
+                        column_size = size.z
+
+                        blayer += struct.pack("HHH", int(width), int(height), int(column_size))
+
+                        sdr = list(encs[l].getHiddenCs().read(cs))
+
+                        for i in range(width * height):
+                            blayer += struct.pack("H", sdr[i])
+
+                        b += blayer
 
                     for l in range(num_layers):
                         blayer = bytearray()
@@ -120,38 +141,72 @@ class VisAdapter:
 
                     if self.caret is not None:
                         layerIndex = int(self.caret[0])
-                    
                         pos = PyInt3(*self.caret[1:4])
+                    
+                        if layerIndex < num_encs:
+                            enc_index = layerIndex
+                            enc = encs[enc_index]
+                            inBounds = pos.x >= 0 and pos.y >= 0 and pos.z >= 0 and pos.x < enc.getHiddenSize().x and pos.y < enc.getHiddenSize().y and pos.z < enc.getHiddenSize().z
 
-                        inBounds = pos.x >= 0 and pos.y >= 0 and pos.z >= 0 and pos.x < h.getHiddenSize(layerIndex).x and pos.y < h.getHiddenSize(layerIndex).y and pos.z < h.getHiddenSize(layerIndex).z
+                            num_fields = 0 if not inBounds else enc.getNumVisibleLayers()
+                        else:
+                            inBounds = pos.x >= 0 and pos.y >= 0 and pos.z >= 0 and pos.x < h.getHiddenSize(layerIndex - num_encs).x and pos.y < h.getHiddenSize(layerIndex - num_encs).y and pos.z < h.getHiddenSize(layerIndex - num_encs).z
 
-                        num_fields = 0 if not inBounds else h.getNumSCVisibleLayers(layerIndex)
+                            num_fields = 0 if not inBounds else h.getNumSCVisibleLayers(layerIndex - num_encs)
                     
                     b += struct.pack("H", num_fields)
 
-                    for f in range(num_fields):
-                        bfield = bytearray()
-                        
-                        name = "field" + str(f)
+                    if layerIndex < num_encs:
+                        enc_index = layerIndex
+                        enc = encs[enc_index]
 
-                        bname = name.encode()
+                        for f in range(num_fields):
+                            bfield = bytearray()
+                            
+                            name = "field" + str(f)
 
-                        while len(bname) < 32:
-                            bname += struct.pack("c", b"\0")
+                            bname = name.encode()
 
-                        bfield += bname
+                            while len(bname) < 32:
+                                bname += struct.pack("c", b"\0")
 
-                        fieldSize = pyogmaneo.PyInt3()
+                            bfield += bname
 
-                        field = h.getSCReceptiveField(cs, layerIndex, f, pos, fieldSize)
-                        fs = ( fieldSize.x, fieldSize.y, fieldSize.z )
-                        
-                        bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
+                            fieldSize = pyogmaneo.PyInt3()
 
-                        for i in range(fieldSize.x * fieldSize.y * fieldSize.z):
-                            bfield += struct.pack("f", field[i])
+                            field = encs[enc_index].getReceptiveField(cs, f, pos, fieldSize)
+                            fs = ( fieldSize.x, fieldSize.y, fieldSize.z )
+                            
+                            bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
 
-                        b += bfield
+                            for i in range(fieldSize.x * fieldSize.y * fieldSize.z):
+                                bfield += struct.pack("f", field[i])
+
+                            b += bfield
+                    else:
+                        for f in range(num_fields):
+                            bfield = bytearray()
+                            
+                            name = "field" + str(f)
+
+                            bname = name.encode()
+
+                            while len(bname) < 32:
+                                bname += struct.pack("c", b"\0")
+
+                            bfield += bname
+
+                            fieldSize = pyogmaneo.PyInt3()
+
+                            field = h.getSCReceptiveField(cs, layerIndex - num_encs, f, pos, fieldSize)
+                            fs = ( fieldSize.x, fieldSize.y, fieldSize.z )
+                            
+                            bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
+
+                            for i in range(fieldSize.x * fieldSize.y * fieldSize.z):
+                                bfield += struct.pack("f", field[i])
+
+                            b += bfield
 
                     try:
                         conn.send(b)

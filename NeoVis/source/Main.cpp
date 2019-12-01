@@ -138,6 +138,7 @@ struct Field {
 
 struct Network {
     sf::Uint16 _numLayers;
+    sf::Uint16 _numEncs; // Number of layers that are encodeers
     std::vector<SDR> _sdrs;
 
     std::vector<Field> _fields;
@@ -173,6 +174,8 @@ bool recv(sf::TcpSocket* socket, char* data, int size) {
 void receiveThreadFunc(sf::TcpSocket* socket) {
     while (!stopReceiving) {
         if (recv(socket, reinterpret_cast<char*>(&bufferedNetwork._numLayers), sizeof(sf::Uint16))) {
+            recv(socket, reinterpret_cast<char*>(&bufferedNetwork._numEncs), sizeof(sf::Uint16));
+
             bufferedNetwork._sdrs.resize(bufferedNetwork._numLayers);
 
             for (int l = 0; l < bufferedNetwork._numLayers; l++) {
@@ -357,7 +360,10 @@ int main() {
 
                 layerCSDRVis[l].draw();
 
-                ImGui::Begin(("Layer " + std::to_string(l)).c_str());
+                if (l < network._numEncs)
+                    ImGui::Begin(("Encoder " + std::to_string(l)).c_str());
+                else
+                    ImGui::Begin(("Layer " + std::to_string(l - network._numEncs)).c_str());
 
                 bool hovering;
                 int hoverX = -1;
@@ -403,7 +409,10 @@ int main() {
 
                         float value = network._fields[i]._field[index];
 
-                        value = std::exp(value); // Transform for ESE encoder
+                        if (caret._layer < network._numEncs)
+                            value = std::tanh(value) * 0.5f + 0.5f; // Transform for image encoder
+                        else
+                            value = std::exp(value); // Transform for ESE encoder
 
                         sf::Uint8 g = std::min(1.0f, std::max(0.0f, value)) * 255;
 
