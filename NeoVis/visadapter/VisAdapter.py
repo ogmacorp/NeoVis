@@ -83,7 +83,7 @@ class VisAdapter:
                     except Exception:
                         conn.close()
 
-                        print("Corrupted carret.")
+                        # print("Corrupted carret.")
 
                         ready = False
 
@@ -167,7 +167,7 @@ class VisAdapter:
 
                             bname = name.encode()
 
-                            while len(bname) < 32:
+                            while len(bname) < 64:
                                 bname += struct.pack("c", b"\0")
 
                             bfield += bname
@@ -175,8 +175,7 @@ class VisAdapter:
                             fieldSize = pyogmaneo.PyInt3()
 
                             field = encs[enc_index].getReceptiveField(cs, f, pos, fieldSize)
-                            fs = ( fieldSize.x, fieldSize.y, fieldSize.z )
-                            
+
                             bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
 
                             for i in range(fieldSize.x * fieldSize.y * fieldSize.z):
@@ -191,7 +190,7 @@ class VisAdapter:
 
                             bname = name.encode()
 
-                            while len(bname) < 32:
+                            while len(bname) < 64:
                                 bname += struct.pack("c", b"\0")
 
                             bfield += bname
@@ -199,8 +198,7 @@ class VisAdapter:
                             fieldSize = pyogmaneo.PyInt3()
 
                             field = h.getSCReceptiveField(cs, layerIndex - num_encs, f, pos, fieldSize)
-                            fs = ( fieldSize.x, fieldSize.y, fieldSize.z )
-                            
+     
                             bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
 
                             for i in range(fieldSize.x * fieldSize.y * fieldSize.z):

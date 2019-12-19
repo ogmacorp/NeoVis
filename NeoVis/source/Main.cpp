@@ -131,7 +131,7 @@ struct SDR {
 };
 
 struct Field {
-    std::array<char, 32> _name;
+    std::array<char, 64> _name;
     sf::Vector3i _fieldSize;
     std::vector<float> _field;
 };
@@ -338,10 +338,10 @@ int main() {
             fieldTextures.clear();
         }
         else if (connectionStatus == _connected) {
+            network = bufferedNetwork;
+
             // Send Caret
             socket.send(reinterpret_cast<char*>(&caret), sizeof(Caret));
-
-            network = bufferedNetwork;
 
             // Init
             if (layerCSDRVis.empty()) {
@@ -399,23 +399,56 @@ int main() {
                 // Make sure is in range
                 fieldZs[i] = std::min(network._fields[i]._fieldSize.z - 1, std::max(0, fieldZs[i]));
 
+                int empty = network._fields[i]._fieldSize.x * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z == 0;
+
                 sf::Image wImg;
 
-                wImg.create(fieldSize.x, fieldSize.y, sf::Color::Black);
+                if (empty)
+                    wImg.create(1, 1);
+                else {
+                    // If can use RGB for pre-encoder
+                    if ((network._fields[i]._fieldSize.z == 3 || network._fields[i]._fieldSize.z == 6) && caret._layer < network._numEncs) {
+                        wImg.create(network._fields[i]._fieldSize.z == 6 ? fieldSize.x * 2 : fieldSize.x, fieldSize.y, sf::Color::Black);
 
-                for (int x = 0; x < wImg.getSize().x; x++)
-                    for (int y = 0; y < wImg.getSize().y; y++) {
-                        int index = fieldZs[i] + y * network._fields[i]._fieldSize.z + x * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
+                        for (int x = 0; x < wImg.getSize().x; x++)
+                            for (int y = 0; y < wImg.getSize().y; y++) {
+                                int offset = x >= fieldSize.x ? 3 : 0;
 
-                        float value = network._fields[i]._field[index];
+                                int rx = x % fieldSize.x;
 
-                        if (caret._layer >= network._numEncs)
-                            value = std::exp(value); // Transform for ESE encoder
+                                int indexR = 0 + offset + y * network._fields[i]._fieldSize.z + rx * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
+                                int indexG = 1 + offset + y * network._fields[i]._fieldSize.z + rx * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
+                                int indexB = 2 + offset + y * network._fields[i]._fieldSize.z + rx * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
 
-                        sf::Uint8 g = std::min(1.0f, std::max(0.0f, value)) * 255;
+                                float valueR = network._fields[i]._field[indexR];
+                                float valueG = network._fields[i]._field[indexG];
+                                float valueB = network._fields[i]._field[indexB];
 
-                        wImg.setPixel(x, y, sf::Color(g, g, g));
+                                sf::Uint8 r = std::min(1.0f, std::max(0.0f, valueR)) * 255;
+                                sf::Uint8 g = std::min(1.0f, std::max(0.0f, valueG)) * 255;
+                                sf::Uint8 b = std::min(1.0f, std::max(0.0f, valueB)) * 255;
+
+                                wImg.setPixel(x, y, sf::Color(r, g, b));
+                            }
                     }
+                    else { // Seperate channels
+                        wImg.create(fieldSize.x, fieldSize.y, sf::Color::Black);
+
+                        for (int x = 0; x < wImg.getSize().x; x++)
+                            for (int y = 0; y < wImg.getSize().y; y++) {
+                                int index = fieldZs[i] + y * network._fields[i]._fieldSize.z + x * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
+
+                                float value = network._fields[i]._field[index];
+
+                                //if (caret._layer >= network._numEncs)
+                                //    value = std::tanh(value * 0.5f) * 0.5f + 0.5f; // Transform for ESE encoder
+
+                                sf::Uint8 g = std::min(1.0f, std::max(0.0f, value)) * 255;
+
+                                wImg.setPixel(x, y, sf::Color(g, g, g));
+                            }
+                    }
+                }
 
                 fieldTextures[i].loadFromImage(wImg);
 
@@ -436,7 +469,12 @@ int main() {
                     fieldZs[i] = std::min(network._fields[i]._fieldSize.z - 1, std::max(0, fieldZs[i] + mouseWheelDelta));
 
                     ImGui::BeginTooltip();
-                    ImGui::SetTooltip(("Z: " + std::to_string(fieldZs[i])).c_str());
+
+                    if ((network._fields[i]._fieldSize.z == 3 || network._fields[i]._fieldSize.z == 6) && caret._layer < network._numEncs)
+                        ImGui::SetTooltip("RGB");
+                    else
+                        ImGui::SetTooltip(("Z: " + std::to_string(fieldZs[i])).c_str());
+
                     ImGui::EndTooltip();
                 }
 
@@ -453,7 +491,7 @@ int main() {
         logoSprite.setOrigin(sf::Vector2f(logoTex.getSize().x * 0.5f, logoTex.getSize().y * 0.5f));
         logoSprite.setPosition(sf::Vector2f(window.getSize().x * 0.5f, window.getSize().y * 0.5f));
         logoSprite.setColor(sf::Color(255, 255, 255, 80));
-        logoSprite.setScale(sf::Vector2f(0.4f, 0.4f));
+        //logoSprite.setScale(sf::Vector2f(1.0f, 1.0f));
 
         window.draw(logoSprite);
 

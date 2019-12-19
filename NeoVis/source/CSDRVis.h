@@ -61,7 +61,7 @@ public:
     }
 
     int &at(int x, int y) {
-        return _columns[x + y * _width];
+        return _columns[y + x * _height];
     }
 
     void draw();
