@@ -440,8 +440,8 @@ int main() {
 
                                 float value = network._fields[i]._field[index];
 
-                                //if (caret._layer >= network._numEncs)
-                                //    value = std::tanh(value * 0.5f) * 0.5f + 0.5f; // Transform for ESE encoder
+                                if (caret._layer >= network._numEncs)
+                                    value = std::tanh(value * 0.5f) * 0.5f + 0.5f; // Transform for ESE encoder
 
                                 sf::Uint8 g = std::min(1.0f, std::max(0.0f, value)) * 255;
 
