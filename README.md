@@ -14,6 +14,8 @@
 
 NeoVis is a visualizer for [OgmaNeo2](https://github.com/ogmacorp/OgmaNeo2) (using the Python interface, [PyOgmaNeo2](https://github.com/ogmacorp/PyOgmaNeo2.git)) hierarchies, built using 'dear imgui' (AKA [ImGui](https://github.com/ocornut/imgui)) and the Simple and Fast Multimedia Library (AKA [SFML](https://www.sfml-dev.org/)).
 
+![Screenshot](./neovis_screen.png)
+
 ## Overview
 
 NeoVis is an application that allows one to visualize in real-time the contents of an OgmaNeo2 hierarchy. It uses sockets to communicate with the client program. It can be connected and disconnected seamlessly, provided the client code contains the appropriate visualization update function.
@@ -40,23 +42,31 @@ Version 3.1, and upwards, of [CMake](https://cmake.org/) is the required version
 Include visadapter/VisAdapter.py into your Python code by whichever method you prefer. Then:
 
 ```python
-import visadapter
+from visadapter.VisAdapter import VisAdapter
 
 # ...
 
-h = pyogmaneo.Hierarchy()
+cs = pyogmaneo.PyComputeSystem(...)
+
+# ...
+
+h = pyogmaneo.PyHierarchy(...)
+
+# ...
+
+enc = pyogmaneo.PyImageEncoder(...)
 
 # ...
 
 # Initialize the VisAdapter
-v = visadapter.VisAdapter()
+v = VisAdapter()
 
 v.create(54000) # Port
 
 # ...
 
 # In simulation loop:
-v.update(h)
+v.update(cs, h, [ enc ]) # Visualize hierarchy h and pre-encoder enc
 
 ```
 
@@ -64,9 +74,12 @@ v.update(h)
 
 Once NeoVis is started, use the `Connection` button and `Connection Wizard` dialog box to open a connection to your hierarchy. Simply specify the address (localhost, if on same machine) of the client, and make sure that both applications are using the same port (default 54000). Once `Connect!` button has been pressed, and the status switches to "Connected", you should see several windows appear.
 
-Each layer has a window for its hidden layer CSDR (Sparse Distributed Representation).
+Each layer has windows for its hidden layer CSDR (Sparse Distributed Representation) and feed-forward weight matrices.
 
-At the moment, CSDR visualization is the only feature of NeoVis. Despite this, we found it quite handy for debugging our programs. If your application isn't functioning properly, it may be a good idea to pear into the network with NeoVis!
+The CSDRs are organized into a "grid of grids", where each sub-grid represents a 1D column (wrapped into 2D for ease of visualization). You can right-click on any cell to show the corresponding feed-forward weight matrices.
+You can also hover over the weight matrix display and use the scroll wheel to cycle through different Z-levels of the weight matrices. If there are 3 or 6 Z-levels, these will be visualized as either RGB or two RGB (side by side) images, respectively.
+
+At the moment, CSDR and feed-forward weight matrix visualizations are the only features of NeoVis. Despite this, we found it quite handy for debugging our programs. If your application isn't functioning properly, it may be a good idea to pear into the network with NeoVis!
 
 ## Note
 
