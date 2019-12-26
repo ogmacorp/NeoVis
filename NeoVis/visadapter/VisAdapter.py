@@ -12,7 +12,7 @@ import struct
 import sys
 import threading
 import pyogmaneo
-from pyogmaneo import PyInt3
+from pyogmaneo import Int3
 
 class VisAdapter:
     def __init__(self, port=54000):
@@ -54,7 +54,7 @@ class VisAdapter:
         self.listener.shutdown(2)
         self.listener.close()
 
-    def update(self, cs: pyogmaneo.PyComputeSystem, h: pyogmaneo.PyHierarchy, encs: [ pyogmaneo.PyImageEncoder ]):
+    def update(self, cs: pyogmaneo.ComputeSystem, h: pyogmaneo.Hierarchy, encs: [ pyogmaneo.ImageEncoder ]):
         new_clients = []
         
         for client in self.clients:
@@ -141,7 +141,7 @@ class VisAdapter:
 
                     if self.caret is not None:
                         layerIndex = int(self.caret[0])
-                        pos = PyInt3(*self.caret[1:4])
+                        pos = Int3(*self.caret[1:4])
                     
                         if layerIndex < num_encs:
                             enc_index = layerIndex
@@ -172,7 +172,7 @@ class VisAdapter:
 
                             bfield += bname
 
-                            fieldSize = pyogmaneo.PyInt3()
+                            fieldSize = pyogmaneo.Int3()
 
                             field = encs[enc_index].getReceptiveField(cs, f, pos, fieldSize)
 
@@ -195,7 +195,7 @@ class VisAdapter:
 
                             bfield += bname
 
-                            fieldSize = pyogmaneo.PyInt3()
+                            fieldSize = pyogmaneo.Int3()
 
                             field = h.getSCReceptiveField(cs, layerIndex - num_encs, f, pos, fieldSize)
      
