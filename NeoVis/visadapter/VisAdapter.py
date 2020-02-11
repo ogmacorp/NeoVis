@@ -72,7 +72,7 @@ class VisAdapter:
                 print("A client disconnected.")
 
             if ready:
-                if len(ready_to_read) > 0:
+                while ready and len(ready_to_read) > 0:
                     try:
                         b = bytearray()
                         
@@ -86,6 +86,8 @@ class VisAdapter:
                         # print("Corrupted carret.")
 
                         ready = False
+
+                    ready_to_read, ready_to_write, in_error = select.select([ conn, ], [ conn, ], [], 5)
 
                 if len(ready_to_write) > 0:
                     # Send data
@@ -109,7 +111,7 @@ class VisAdapter:
 
                         blayer += struct.pack("HHH", int(width), int(height), int(column_size))
 
-                        sdr = list(encs[l].getHiddenCs().read(cs))
+                        sdr = list(encs[l].getHiddenCs())
 
                         for i in range(width * height):
                             blayer += struct.pack("H", sdr[i])
@@ -127,7 +129,7 @@ class VisAdapter:
 
                         blayer += struct.pack("HHH", int(width), int(height), int(column_size))
 
-                        sdr = list(h.getHiddenCs(l).read(cs))
+                        sdr = list(h.getHiddenCs(l))
 
                         for i in range(width * height):
                             blayer += struct.pack("H", sdr[i])
