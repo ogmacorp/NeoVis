@@ -87,9 +87,18 @@ class VisAdapter:
 
                         ready = False
 
-                    ready_to_read, ready_to_write, in_error = select.select([ conn, ], [ conn, ], [], 5)
+                    # Read remainder
+                    if ready:
+                        try:
+                            ready_to_read, ready_to_write, in_error = select.select([ conn, ], [ conn, ], [], 5)
+                        except select.error:
+                            conn.close()
 
-                if len(ready_to_write) > 0:
+                            ready = False
+
+                            print("A client disconnected.")
+
+                if ready and len(ready_to_write) > 0:
                     # Send data
                     num_layers = h.getNumLayers()
                     num_encs = len(encs)
