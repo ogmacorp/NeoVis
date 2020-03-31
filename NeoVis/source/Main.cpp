@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  NeoVis
-//  Copyright(c) 2017-2019 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2017-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of NeoVis is licensed to you under the terms described
 //  in the NEOVIS_LICENSE.md file included in this distribution.
@@ -23,7 +23,7 @@
 const int maxStr = 128;
 
 enum ConnectionStatus {
-    _disconnected, _connected, _connecting
+    disconnected, connected, connecting
 };
 
 ConnectionStatus connectionStatus;
@@ -48,7 +48,7 @@ void endReceiving() {
 }
 
 void connectThreadFunc(sf::TcpSocket* socket) {
-    connectionStatus = _connecting;
+    connectionStatus = connecting;
 
     std::string shortAddress = addressStr;
 
@@ -69,7 +69,7 @@ void connectThreadFunc(sf::TcpSocket* socket) {
     catch (std::exception e) {
         std::cout << "Invalid port!";
 
-        connectionStatus = _disconnected;
+        connectionStatus = disconnected;
 
         return;
     }
@@ -79,7 +79,7 @@ void connectThreadFunc(sf::TcpSocket* socket) {
     sf::Socket::Status status = socket->connect(shortAddress, port, sf::seconds(5.0f));
     
     if (status == sf::Socket::Status::Done) {
-        connectionStatus = _connected;
+        connectionStatus = connected;
 
         std::cout << "Connection established!" << std::endl;
 
@@ -92,7 +92,7 @@ void connectThreadFunc(sf::TcpSocket* socket) {
         return;
     }
     else {
-        connectionStatus = _disconnected;
+        connectionStatus = disconnected;
 
         std::cout << "Connection failed! Reason:" << std::endl;
 
@@ -116,35 +116,35 @@ void connectThreadFunc(sf::TcpSocket* socket) {
 }
 
 struct Caret {
-    sf::Uint16 _layer;
-    sf::Vector3i _pos;
+    sf::Uint16 layer;
+    sf::Vector3i pos;
 
     Caret()
-    : _layer(0),
-    _pos(-1, -1, -1)
+    : layer(0),
+    pos(-1, -1, -1)
     {}
 };
 
 struct SDR {
-    sf::Uint16 _width, _height, _columnSize;
-    std::vector<sf::Uint16> _indices;
+    sf::Uint16 width, height, columnSize;
+    std::vector<sf::Uint16> indices;
 };
 
 struct Field {
-    std::array<char, 64> _name;
-    sf::Vector3i _fieldSize;
-    std::vector<float> _field;
+    std::array<char, 64> name;
+    sf::Vector3i fieldSize;
+    std::vector<float> field;
 };
 
 struct Network {
-    sf::Uint16 _numLayers;
-    sf::Uint16 _numEncs; // Number of layers that are encodeers
-    std::vector<SDR> _sdrs;
+    sf::Uint16 numLayers;
+    sf::Uint16 numEncs; // Number of layers that are encodeers
+    std::vector<SDR> sdrs;
 
-    std::vector<Field> _fields;
+    std::vector<Field> fields;
 
     Network()
-    : _numLayers(0)
+    : numLayers(0)
     {}
 };
 
@@ -161,7 +161,7 @@ bool recv(sf::TcpSocket* socket, char* data, int size) {
         sf::Socket::Status s = socket->receive(&data[numReceived], size - numReceived, received);
 
         if (s != sf::Socket::Status::Done) {
-            connectionStatus = _disconnected;
+            connectionStatus = disconnected;
             return false;
         }
             
@@ -173,19 +173,19 @@ bool recv(sf::TcpSocket* socket, char* data, int size) {
 
 void receiveThreadFunc(sf::TcpSocket* socket) {
     while (!stopReceiving) {
-        if (recv(socket, reinterpret_cast<char*>(&bufferedNetwork._numLayers), sizeof(sf::Uint16))) {
-            recv(socket, reinterpret_cast<char*>(&bufferedNetwork._numEncs), sizeof(sf::Uint16));
+        if (recv(socket, reinterpret_cast<char*>(&bufferedNetwork.numLayers), sizeof(sf::Uint16))) {
+            recv(socket, reinterpret_cast<char*>(&bufferedNetwork.numEncs), sizeof(sf::Uint16));
 
-            bufferedNetwork._sdrs.resize(bufferedNetwork._numLayers);
+            bufferedNetwork.sdrs.resize(bufferedNetwork.numLayers);
 
-            for (int l = 0; l < bufferedNetwork._numLayers; l++) {
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._sdrs[l]._width), sizeof(sf::Uint16));
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._sdrs[l]._height), sizeof(sf::Uint16));
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._sdrs[l]._columnSize), sizeof(sf::Uint16));
+            for (int l = 0; l < bufferedNetwork.numLayers; l++) {
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.sdrs[l].width), sizeof(sf::Uint16));
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.sdrs[l].height), sizeof(sf::Uint16));
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.sdrs[l].columnSize), sizeof(sf::Uint16));
 
-                bufferedNetwork._sdrs[l]._indices.resize(bufferedNetwork._sdrs[l]._width * bufferedNetwork._sdrs[l]._height);
+                bufferedNetwork.sdrs[l].indices.resize(bufferedNetwork.sdrs[l].width * bufferedNetwork.sdrs[l].height);
                 
-                recv(socket, reinterpret_cast<char*>(bufferedNetwork._sdrs[l]._indices.data()), bufferedNetwork._sdrs[l]._indices.size() * sizeof(sf::Uint16));
+                recv(socket, reinterpret_cast<char*>(bufferedNetwork.sdrs[l].indices.data()), bufferedNetwork.sdrs[l].indices.size() * sizeof(sf::Uint16));
             }
 
             // Number of fields
@@ -193,15 +193,15 @@ void receiveThreadFunc(sf::TcpSocket* socket) {
 
             recv(socket, reinterpret_cast<char*>(&numFields), sizeof(sf::Uint16));
             
-            bufferedNetwork._fields.resize(numFields);
+            bufferedNetwork.fields.resize(numFields);
 
             for (int f = 0; f < numFields; f++) {
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._fields[f]._name), sizeof(bufferedNetwork._fields[f]._name));
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork._fields[f]._fieldSize), sizeof(sf::Vector3i));
-                int totalSize = bufferedNetwork._fields[f]._fieldSize.x * bufferedNetwork._fields[f]._fieldSize.y * bufferedNetwork._fields[f]._fieldSize.z;
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.fields[f].name), sizeof(bufferedNetwork.fields[f].name));
+                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.fields[f].fieldSize), sizeof(sf::Vector3i));
+                int totalSize = bufferedNetwork.fields[f].fieldSize.x * bufferedNetwork.fields[f].fieldSize.y * bufferedNetwork.fields[f].fieldSize.z;
 
-                bufferedNetwork._fields[f]._field.resize(totalSize);
-                recv(socket, reinterpret_cast<char*>(bufferedNetwork._fields[f]._field.data()), bufferedNetwork._fields[f]._field.size() * sizeof(float));
+                bufferedNetwork.fields[f].field.resize(totalSize);
+                recv(socket, reinterpret_cast<char*>(bufferedNetwork.fields[f].field.data()), bufferedNetwork.fields[f].field.size() * sizeof(float));
             }
         }
     }
@@ -300,13 +300,13 @@ int main() {
                 std::string statusStr;
                 
                 switch (connectionStatus) {
-                case _connected:
+                case connected:
                     statusStr = "Connected!";
                     break;
-                case _connecting:
+                case connecting:
                     statusStr = "Connecting...";
                     break;
-                case _disconnected:
+                case disconnected:
                     statusStr = "Disconnected.";
                     break;
                 }
@@ -333,11 +333,11 @@ int main() {
                 connectionWizardOpen = false;
         }
 
-        if (connectionStatus == _disconnected) {
+        if (connectionStatus == disconnected) {
             layerCSDRVis.clear();
             fieldTextures.clear();
         }
-        else if (connectionStatus == _connected) {
+        else if (connectionStatus == connected) {
             network = bufferedNetwork;
 
             // Send Caret
@@ -345,25 +345,25 @@ int main() {
 
             // Init
             if (layerCSDRVis.empty()) {
-                layerCSDRVis.resize(network._numLayers);
+                layerCSDRVis.resize(network.numLayers);
 
-                for (int l = 0; l < network._numLayers; l++)
-                    layerCSDRVis[l].init(network._sdrs[l]._width, network._sdrs[l]._height, network._sdrs[l]._columnSize);
+                for (int l = 0; l < network.numLayers; l++)
+                    layerCSDRVis[l].init(network.sdrs[l].width, network.sdrs[l].height, network.sdrs[l].columnSize);
             }
 
             // Visualize content
-            for (int l = 0; l < network._numLayers; l++) {
-                SDR &sdr = network._sdrs[l];
+            for (int l = 0; l < network.numLayers; l++) {
+                SDR &sdr = network.sdrs[l];
 
-                for (int i = 0; i < sdr._indices.size(); i++)
-                    layerCSDRVis[l][i] = sdr._indices[i];
+                for (int i = 0; i < sdr.indices.size(); i++)
+                    layerCSDRVis[l][i] = sdr.indices[i];
 
                 layerCSDRVis[l].draw();
 
-                if (l < network._numEncs)
+                if (l < network.numEncs)
                     ImGui::Begin(("Pre-encoder " + std::to_string(l)).c_str());
                 else
-                    ImGui::Begin(("Layer " + std::to_string(l - network._numEncs)).c_str());
+                    ImGui::Begin(("Layer " + std::to_string(l - network.numEncs)).c_str());
 
                 bool hovering;
                 int hoverX = -1;
@@ -374,32 +374,32 @@ int main() {
                 if (hovering) {
                     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
                         // Divide by size
-                        layerCSDRVis[l]._highlightX = static_cast<int>(hoverX / layerCSDRVis[l]._nodeSpaceSize);
-                        layerCSDRVis[l]._highlightY = layerCSDRVis[l].getSizeInNodes().y - static_cast<int>(hoverY / layerCSDRVis[l]._nodeSpaceSize + 1.0f);
+                        layerCSDRVis[l].highlightX = static_cast<int>(hoverX / layerCSDRVis[l].nodeSpaceSize);
+                        layerCSDRVis[l].highlightY = layerCSDRVis[l].getSizeInNodes().y - static_cast<int>(hoverY / layerCSDRVis[l].nodeSpaceSize + 1.0f);
 
-                        caret._pos = layerCSDRVis[l].getHighlightedCSDRPos();
-                        caret._layer = l;
+                        caret.pos = layerCSDRVis[l].getHighlightedCSDRPos();
+                        caret.layer = l;
                     }
                 }
                 else {
-                    layerCSDRVis[l]._highlightX = -1;
-                    layerCSDRVis[l]._highlightY = -1;
+                    layerCSDRVis[l].highlightX = -1;
+                    layerCSDRVis[l].highlightY = -1;
                 }
     
                 ImGui::End();
             }
 
             // Show contents of caret position
-            fieldTextures.resize(network._fields.size());
-            fieldZs.resize(network._fields.size(), 0);
+            fieldTextures.resize(network.fields.size());
+            fieldZs.resize(network.fields.size(), 0);
 
-            for (int i = 0; i < network._fields.size(); i++) {
-                sf::Vector3i fieldSize = network._fields[i]._fieldSize;
+            for (int i = 0; i < network.fields.size(); i++) {
+                sf::Vector3i fieldSize = network.fields[i].fieldSize;
 
                 // Make sure is in range
-                fieldZs[i] = std::min(network._fields[i]._fieldSize.z - 1, std::max(0, fieldZs[i]));
+                fieldZs[i] = std::min(network.fields[i].fieldSize.z - 1, std::max(0, fieldZs[i]));
 
-                int empty = network._fields[i]._fieldSize.x * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z == 0;
+                int empty = network.fields[i].fieldSize.x * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z == 0;
 
                 sf::Image wImg;
 
@@ -407,8 +407,8 @@ int main() {
                     wImg.create(1, 1);
                 else {
                     // If can use RGB for pre-encoder
-                    if ((network._fields[i]._fieldSize.z == 3 || network._fields[i]._fieldSize.z == 6) && caret._layer < network._numEncs) {
-                        wImg.create(network._fields[i]._fieldSize.z == 6 ? fieldSize.x * 2 : fieldSize.x, fieldSize.y, sf::Color::Black);
+                    if ((network.fields[i].fieldSize.z == 3 || network.fields[i].fieldSize.z == 6) && caret.layer < network.numEncs) {
+                        wImg.create(network.fields[i].fieldSize.z == 6 ? fieldSize.x * 2 : fieldSize.x, fieldSize.y, sf::Color::Black);
 
                         for (int x = 0; x < wImg.getSize().x; x++)
                             for (int y = 0; y < wImg.getSize().y; y++) {
@@ -416,13 +416,13 @@ int main() {
 
                                 int rx = x % fieldSize.x;
 
-                                int indexR = 0 + offset + y * network._fields[i]._fieldSize.z + rx * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
-                                int indexG = 1 + offset + y * network._fields[i]._fieldSize.z + rx * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
-                                int indexB = 2 + offset + y * network._fields[i]._fieldSize.z + rx * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
+                                int indexR = 0 + offset + y * network.fields[i].fieldSize.z + rx * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
+                                int indexG = 1 + offset + y * network.fields[i].fieldSize.z + rx * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
+                                int indexB = 2 + offset + y * network.fields[i].fieldSize.z + rx * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
 
-                                float valueR = network._fields[i]._field[indexR];
-                                float valueG = network._fields[i]._field[indexG];
-                                float valueB = network._fields[i]._field[indexB];
+                                float valueR = network.fields[i].field[indexR];
+                                float valueG = network.fields[i].field[indexG];
+                                float valueB = network.fields[i].field[indexB];
 
                                 sf::Uint8 r = std::min(1.0f, std::max(0.0f, valueR)) * 255;
                                 sf::Uint8 g = std::min(1.0f, std::max(0.0f, valueG)) * 255;
@@ -436,12 +436,12 @@ int main() {
 
                         for (int x = 0; x < wImg.getSize().x; x++)
                             for (int y = 0; y < wImg.getSize().y; y++) {
-                                int index = fieldZs[i] + y * network._fields[i]._fieldSize.z + x * network._fields[i]._fieldSize.y * network._fields[i]._fieldSize.z;
+                                int index = fieldZs[i] + y * network.fields[i].fieldSize.z + x * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
 
-                                float value = network._fields[i]._field[index];
+                                float value = network.fields[i].field[index];
 
-                                //if (caret._layer >= network._numEncs)
-                                //    value = std::exp(value); // Transform for ESE encoder
+                                if (caret.layer >= network.numEncs)
+                                    value = std::exp(value); // Transform for ESR encoder
 
                                 sf::Uint8 g = std::min(1.0f, std::max(0.0f, value)) * 255;
 
@@ -454,7 +454,7 @@ int main() {
 
                 fieldTextures[i].setSmooth(false);
 
-                std::string name = network._fields[i]._name.data();
+                std::string name = network.fields[i].name.data();
 
                 ImGui::Begin(name.c_str());
 
@@ -466,11 +466,11 @@ int main() {
 
                 if (hovering) {
                     // Select field Z
-                    fieldZs[i] = std::min(network._fields[i]._fieldSize.z - 1, std::max(0, fieldZs[i] + mouseWheelDelta));
+                    fieldZs[i] = std::min(network.fields[i].fieldSize.z - 1, std::max(0, fieldZs[i] + mouseWheelDelta));
 
                     ImGui::BeginTooltip();
 
-                    if ((network._fields[i]._fieldSize.z == 3 || network._fields[i]._fieldSize.z == 6) && caret._layer < network._numEncs)
+                    if ((network.fields[i].fieldSize.z == 3 || network.fields[i].fieldSize.z == 6) && caret.layer < network.numEncs)
                         ImGui::SetTooltip("RGB");
                     else
                         ImGui::SetTooltip(("Z: " + std::to_string(fieldZs[i])).c_str());

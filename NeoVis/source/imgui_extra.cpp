@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  NeoVis
-//  Copyright(c) 2017-2019 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2017-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of NeoVis is licensed to you under the terms described
 //  in the NEOVIS_LICENSE.md file included in this distribution.

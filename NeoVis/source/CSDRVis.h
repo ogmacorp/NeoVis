@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  NeoVis
-//  Copyright(c) 2017-2019 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2017-2020 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of NeoVis is licensed to you under the terms described
 //  in the NEOVIS_LICENSE.md file included in this distribution.
@@ -15,66 +15,66 @@
 
 class CSDRVis {
 private:
-    std::shared_ptr<sf::RenderTexture> _rt;
+    std::shared_ptr<sf::RenderTexture> rt;
 
-    std::vector<int> _columns;
+    std::vector<int> columns;
 
-    int _width, _height, _columnSize;
-    int _rootColumnSize;
+    int width, height, columnSize;
+    int rootColumnSize;
 
     void drawColumn(const sf::Vector2f &position, int index, bool isOdd, int cx, int cy);
 
-    sf::Vector3i _highlightedCSDRPos;
+    sf::Vector3i highlightedCSDRPos;
 
 public:
-    float _edgeRadius;
-    float _nodeSpaceSize;
-    float _nodeOuterRatio;
-    float _nodeInnerRatio;
+    float edgeRadius;
+    float nodeSpaceSize;
+    float nodeOuterRatio;
+    float nodeInnerRatio;
     
-    int _edgeSegments;
-    int _nodeOuterSegments;
-    int _nodeInnerSegments;
+    int edgeSegments;
+    int nodeOuterSegments;
+    int nodeInnerSegments;
 
-    sf::Color _backgroundColor0;
-    sf::Color _backgroundColor1;
-    sf::Color _nodeOuterColor;
-    sf::Color _nodeInnerColor;
+    sf::Color backgroundColor0;
+    sf::Color backgroundColor1;
+    sf::Color nodeOuterColor;
+    sf::Color nodeInnerColor;
 
-    sf::Color _nodeInnerColorHighlight;
+    sf::Color nodeInnerColorHighlight;
 
-    int _highlightX, _highlightY;
+    int highlightX, highlightY;
 
     CSDRVis()
-        : _edgeRadius(4.0f), _nodeSpaceSize(16.0f), _nodeOuterRatio(0.85f), _nodeInnerRatio(0.75f),
-        _edgeSegments(16), _nodeOuterSegments(16), _nodeInnerSegments(16),
-        _backgroundColor0(98, 98, 98), _backgroundColor1(168, 168, 168), _nodeOuterColor(64, 64, 64), _nodeInnerColor(255, 0, 0),
-        _nodeInnerColorHighlight(0, 255, 0),
-        _highlightX(-1), _highlightY(-1),
-        _highlightedCSDRPos(-1, -1, -1)
+        : edgeRadius(4.0f), nodeSpaceSize(16.0f), nodeOuterRatio(0.85f), nodeInnerRatio(0.75f),
+        edgeSegments(16), nodeOuterSegments(16), nodeInnerSegments(16),
+        backgroundColor0(98, 98, 98), backgroundColor1(168, 168, 168), nodeOuterColor(64, 64, 64), nodeInnerColor(255, 0, 0),
+        nodeInnerColorHighlight(0, 255, 0),
+        highlightX(-1), highlightY(-1),
+        highlightedCSDRPos(-1, -1, -1)
     {}
 
     void init(int width, int height, int columnSize);
 
     int &operator[](int index) {
-        return _columns[index];
+        return columns[index];
     }
 
     int &at(int x, int y) {
-        return _columns[y + x * _height];
+        return columns[y + x * height];
     }
 
     void draw();
 
     sf::Vector2i getSizeInNodes() const {
-        return sf::Vector2i(_width * _rootColumnSize, _height * _rootColumnSize);
+        return sf::Vector2i(width * rootColumnSize, height * rootColumnSize);
     }
 
     const sf::Texture &getTexture() const {
-        return _rt->getTexture();
+        return rt->getTexture();
     }
 
     const sf::Vector3i &getHighlightedCSDRPos() const {
-        return _highlightedCSDRPos;
+        return highlightedCSDRPos;
     }
 };

@@ -25,14 +25,14 @@ class VisAdapter:
 
         self.listener.listen(1)
 
-        self.listen_thread = threading.Thread(target=self.listen, daemon=True)
+        self.listen_thread = threading.Thread(target=self._listen, daemon=True)
         self.listen_thread.start()
 
         self.clients = []
 
         self.caret = None
 
-    def listen(self):
+    def _listen(self):
         while not self.stop:
             conn, addr = self.listener.accept()
 
