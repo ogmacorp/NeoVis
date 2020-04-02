@@ -10,9 +10,9 @@
 #include <cmath>
 
 void CSDRVis::init(int width, int height, int columnSize) {
-	width = width;
-	height = height;
-    columnSize = columnSize;
+	this->width = width;
+	this->height = height;
+    this->columnSize = columnSize;
     rootColumnSize = std::ceil(std::sqrt(static_cast<float>(columnSize)));
 
 	columns.clear();
@@ -98,9 +98,9 @@ void CSDRVis::drawColumn(const sf::Vector2f &position, int index, bool isOdd, in
 					highlightedCSDRPos.z = subIndex;
 				}
 
-				sf::Color nodeInnerColor = highlight ? nodeInnerColorHighlight : nodeInnerColor;
+				sf::Color subNodeInnerColor = highlight ? nodeInnerColorHighlight : nodeInnerColor;
 	
-                inner.setFillColor(sf::Color(nodeInnerColor.r, nodeInnerColor.g, nodeInnerColor.b, subIndex == index || highlight ? 255 : 0));
+                inner.setFillColor(sf::Color(subNodeInnerColor.r, subNodeInnerColor.g, subNodeInnerColor.b, subIndex == index || highlight ? 255 : 0));
 
                 rt->draw(inner);
             }
