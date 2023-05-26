@@ -17,6 +17,7 @@
 
 #include <thread>
 #include <mutex>
+#include <array>
 #include <fstream>
 #include <iostream>
 

@@ -10,13 +10,14 @@
 #include <cmath>
 
 void CSDRVis::init(int width, int height, int columnSize) {
-	this->width = width;
-	this->height = height;
+    this->width = width;
+    this->height = height;
     this->columnSize = columnSize;
+
     rootColumnSize = std::ceil(std::sqrt(static_cast<float>(columnSize)));
 
-	columns.clear();
-	columns.assign(width * height, 0);
+    columns.clear();
+    columns.assign(width * height, 0);
 
     float rSize = nodeSpaceSize * rootColumnSize;
 
@@ -77,34 +78,34 @@ void CSDRVis::drawColumn(const sf::Vector2f &position, int index, bool isOdd, in
 	inner.setOrigin(sf::Vector2f(inner.getRadius(), inner.getRadius()));
 
 	for (int x = 0; x < rootColumnSize; x++)
-		for (int y = 0; y < rootColumnSize; y++) {
-            int subIndex = x + y * rootColumnSize;
+	    for (int y = 0; y < rootColumnSize; y++) {
+                int subIndex = x + y * rootColumnSize;
 
-            if (subIndex < columnSize) {
-                outer.setPosition(position + sf::Vector2f(x * nodeSpaceSize + edgeRadius * 2.0f, y * nodeSpaceSize + edgeRadius * 2.0f));
+                if (subIndex < columnSize) {
+                    outer.setPosition(position + sf::Vector2f(x * nodeSpaceSize + edgeRadius * 2.0f, y * nodeSpaceSize + edgeRadius * 2.0f));
 
-                rt->draw(outer);
+                    rt->draw(outer);
 
-                inner.setPosition(position + sf::Vector2f(x * nodeSpaceSize + edgeRadius * 2.0f, y * nodeSpaceSize + edgeRadius * 2.0f));
+                    inner.setPosition(position + sf::Vector2f(x * nodeSpaceSize + edgeRadius * 2.0f, y * nodeSpaceSize + edgeRadius * 2.0f));
 
-				int tx = cx * rootColumnSize + x;
-				int ty = cy * rootColumnSize + y;
+                                    int tx = cx * rootColumnSize + x;
+                                    int ty = cy * rootColumnSize + y;
 
-				bool highlight = (tx == highlightX && ty == highlightY);
+                                    bool highlight = (tx == highlightX && ty == highlightY);
 
-				if (highlight) {
-					highlightedCSDRPos.x = cx;
-					highlightedCSDRPos.y = cy;
-					highlightedCSDRPos.z = subIndex;
-				}
+                                    if (highlight) {
+                                            highlightedCSDRPos.x = cx;
+                                            highlightedCSDRPos.y = cy;
+                                            highlightedCSDRPos.z = subIndex;
+                                    }
 
-				sf::Color subNodeInnerColor = highlight ? nodeInnerColorHighlight : nodeInnerColor;
-	
-                inner.setFillColor(sf::Color(subNodeInnerColor.r, subNodeInnerColor.g, subNodeInnerColor.b, subIndex == index || highlight ? 255 : 0));
+                                    sf::Color subNodeInnerColor = highlight ? nodeInnerColorHighlight : nodeInnerColor;
+            
+                    inner.setFillColor(sf::Color(subNodeInnerColor.r, subNodeInnerColor.g, subNodeInnerColor.b, subIndex == index || highlight ? 255 : 0));
 
-                rt->draw(inner);
+                    rt->draw(inner);
+                }
             }
-		}
 }
 
 void CSDRVis::draw() {
@@ -112,11 +113,11 @@ void CSDRVis::draw() {
 
     float rSize = nodeSpaceSize * rootColumnSize;
 
-	// float rWidth = rSize * width;
-	// float rHeight = rSize * height;
+    // float rWidth = rSize * width;
+    // float rHeight = rSize * height;
 
-	for (int x = 0; x < width; x++)
-		for (int y = 0; y < height; y++)
+    for (int x = 0; x < width; x++)
+        for (int y = 0; y < height; y++)
             drawColumn(sf::Vector2f(x * rSize, y * rSize), at(x, y), x % 2 != y % 2, x, y);
 
     rt->display();

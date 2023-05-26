@@ -11,8 +11,7 @@ import select
 import struct
 import sys
 import threading
-import pyogmaneo
-from pyogmaneo import Int3
+import pyaogmaneo as neo
 
 class VisAdapter:
     def __init__(self, port=54000):
@@ -54,7 +53,7 @@ class VisAdapter:
         self.listener.shutdown(2)
         self.listener.close()
 
-    def update(self, cs: pyogmaneo.ComputeSystem, h: pyogmaneo.Hierarchy, encs: [ pyogmaneo.ImageEncoder ]):
+    def update(self, h: neo.Hierarchy, encs: [ neo.ImageEncoder ]):
         new_clients = []
         
         for client in self.clients:
@@ -100,7 +99,7 @@ class VisAdapter:
 
                 if ready and len(ready_to_write) > 0:
                     # Send data
-                    num_layers = h.getNumLayers()
+                    num_layers = h.get_num_layers()
                     num_encs = len(encs)
 
                     b = bytearray()
@@ -112,15 +111,15 @@ class VisAdapter:
                     for l in range(num_encs):
                         blayer = bytearray()
 
-                        size = encs[l].getHiddenSize()
+                        size = encs[l].get_hidden_size()
 
-                        width = size.x
-                        height = size.y
-                        column_size = size.z
+                        width = size[0]
+                        height = size[1]
+                        column_size = size[2]
 
                         blayer += struct.pack("HHH", int(width), int(height), int(column_size))
 
-                        sdr = list(encs[l].getHiddenCs())
+                        sdr = encs[l].get_hidden_cis()
 
                         for i in range(width * height):
                             blayer += struct.pack("H", sdr[i])
@@ -130,45 +129,46 @@ class VisAdapter:
                     for l in range(num_layers):
                         blayer = bytearray()
 
-                        size = h.getHiddenSize(l)
+                        size = h.get_hidden_size(l)
 
-                        width = size.x
-                        height = size.y
-                        column_size = size.z
+                        width = size[0]
+                        height = size[1]
+                        column_size = size[2]
 
                         blayer += struct.pack("HHH", int(width), int(height), int(column_size))
 
-                        sdr = list(h.getHiddenCs(l))
+                        sdr = list(h.get_hidden_cis(l))
 
                         for i in range(width * height):
                             blayer += struct.pack("H", sdr[i])
 
                         b += blayer
 
-                    assert(self.caret is None or (self.caret[0] >= 0 and self.caret[0] < h.getNumLayers() + num_encs))
+                    assert(self.caret is None or (self.caret[0] >= 0 and self.caret[0] < h.get_num_layers() + num_encs))
                     
                     num_fields = 0
-                    layerIndex = 0
+                    layer_index = 0
 
                     if self.caret is not None:
-                        layerIndex = int(self.caret[0])
-                        pos = Int3(*self.caret[1:4])
+                        layer_index = int(self.caret[0])
+                        pos = tuple(*self.caret[1:4])
                     
-                        if layerIndex < num_encs:
-                            enc_index = layerIndex
+                        if layer_index < num_encs:
+                            enc_index = layer_index
                             enc = encs[enc_index]
-                            inBounds = pos.x >= 0 and pos.y >= 0 and pos.z >= 0 and pos.x < enc.getHiddenSize().x and pos.y < enc.getHiddenSize().y and pos.z < enc.getHiddenSize().z
 
-                            num_fields = 0 if not inBounds else enc.getNumVisibleLayers()
+                            in_bounds = pos[0] >= 0 and pos[1] >= 0 and pos[2] >= 0 and pos[0] < enc.get_hidden_size()[0] and pos[1] < enc.get_hidden_size()[1] and pos[2] < enc.get_hidden_size()[2]
+
+                            num_fields = 0 if not in_bounds else enc.get_num_visible_layers()
                         else:
-                            inBounds = pos.x >= 0 and pos.y >= 0 and pos.z >= 0 and pos.x < h.getHiddenSize(layerIndex - num_encs).x and pos.y < h.getHiddenSize(layerIndex - num_encs).y and pos.z < h.getHiddenSize(layerIndex - num_encs).z
+                            in_bounds = pos[0] >= 0 and pos[1] >= 0 and pos[2] >= 0 and pos[0] < h.get_hidden_size(layer_index - num_encs)[0] and pos[1] < h.get_hidden_size(layer_index - num_encs)[1] and pos[2] < h.get_hidden_size(layer_index - num_encs)[2]
 
-                            num_fields = 0 if not inBounds else h.getNumSCVisibleLayers(layerIndex - num_encs)
+                            num_fields = 0 if not in_bounds else h.get_num_encoder_visible_layers(layer_index - num_encs)
                     
                     b += struct.pack("H", num_fields)
 
-                    if layerIndex < num_encs:
-                        enc_index = layerIndex
+                    if layer_index < num_encs:
+                        enc_index = layer_index
                         enc = encs[enc_index]
 
                         for f in range(num_fields):
@@ -183,13 +183,11 @@ class VisAdapter:
 
                             bfield += bname
 
-                            fieldSize = pyogmaneo.Int3()
+                            field, field_size = encs[enc_index].get_encoder_receptive_field(f, pos)
 
-                            field = encs[enc_index].getReceptiveField(cs, f, pos, fieldSize)
+                            bfield += struct.pack("iii", field_size[0], field_size[1], field_size[2])
 
-                            bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
-
-                            for i in range(fieldSize.x * fieldSize.y * fieldSize.z):
+                            for i in range(field_size[0] * field_size[1] * field_size[2]):
                                 bfield += struct.pack("f", field[i])
 
                             b += bfield
@@ -206,13 +204,11 @@ class VisAdapter:
 
                             bfield += bname
 
-                            fieldSize = pyogmaneo.Int3()
-
-                            field = h.getSCReceptiveField(cs, layerIndex - num_encs, f, pos, fieldSize)
+                            field, field_size = h.get_encoder_receptive_field(layerIndex - num_encs, f, pos)
      
-                            bfield += struct.pack("iii", fieldSize.x, fieldSize.y, fieldSize.z)
+                            bfield += struct.pack("iii", field_size[0], field_size[1], field_size[2])
 
-                            for i in range(fieldSize.x * fieldSize.y * fieldSize.z):
+                            for i in range(field_size[0] * field_size[1] * field_size[2]):
                                 bfield += struct.pack("f", field[i])
 
                             b += bfield
