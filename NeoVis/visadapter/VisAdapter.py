@@ -35,7 +35,7 @@ class VisAdapter:
         while not self.stop:
             conn, addr = self.listener.accept()
 
-            self.clients.append(( conn, addr ))
+            self.clients.append((conn, addr))
 
             print("Connected!")
 
@@ -144,7 +144,7 @@ class VisAdapter:
 
                         b += blayer
 
-                    assert(self.caret is None or (self.caret[0] >= 0 and self.caret[0] < h.get_num_layers() + num_encs))
+                    assert self.caret is None or (self.caret[0] >= 0 and self.caret[0] < h.get_num_layers() + num_encs)
                     
                     num_fields = 0
                     layer_index = 0
@@ -183,7 +183,7 @@ class VisAdapter:
 
                             bfield += bname
 
-                            field, field_size = encs[enc_index].get_encoder_receptive_field(f, pos)
+                            field, field_size = encs[enc_index].get_receptive_field(f, pos)
 
                             bfield += struct.pack("iii", field_size[0], field_size[1], field_size[2])
 

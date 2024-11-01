@@ -153,13 +153,13 @@ Network bufferedNetwork;
 Network network;
 Caret caret;
 
-bool recv(sf::TcpSocket* socket, char* data, int size) {
+bool recv(sf::TcpSocket* socket, void* data, int size) {
     int numReceived = 0;
 
     while (numReceived < size) {
         size_t received;
 
-        sf::Socket::Status s = socket->receive(&data[numReceived], size - numReceived, received);
+        sf::Socket::Status s = socket->receive(&reinterpret_cast<char*>(data)[numReceived], size - numReceived, received);
 
         if (s != sf::Socket::Status::Done) {
             connectionStatus = disconnected;
@@ -174,35 +174,35 @@ bool recv(sf::TcpSocket* socket, char* data, int size) {
 
 void receiveThreadFunc(sf::TcpSocket* socket) {
     while (!stopReceiving) {
-        if (recv(socket, reinterpret_cast<char*>(&bufferedNetwork.numLayers), sizeof(sf::Uint16))) {
-            recv(socket, reinterpret_cast<char*>(&bufferedNetwork.numEncs), sizeof(sf::Uint16));
+        if (recv(socket, &bufferedNetwork.numLayers, sizeof(sf::Uint16))) {
+            recv(socket, &bufferedNetwork.numEncs, sizeof(sf::Uint16));
 
             bufferedNetwork.sdrs.resize(bufferedNetwork.numLayers);
 
             for (int l = 0; l < bufferedNetwork.numLayers; l++) {
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.sdrs[l].width), sizeof(sf::Uint16));
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.sdrs[l].height), sizeof(sf::Uint16));
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.sdrs[l].columnSize), sizeof(sf::Uint16));
+                recv(socket, &bufferedNetwork.sdrs[l].width, sizeof(sf::Uint16));
+                recv(socket, &bufferedNetwork.sdrs[l].height, sizeof(sf::Uint16));
+                recv(socket, &bufferedNetwork.sdrs[l].columnSize, sizeof(sf::Uint16));
 
                 bufferedNetwork.sdrs[l].indices.resize(bufferedNetwork.sdrs[l].width * bufferedNetwork.sdrs[l].height);
                 
-                recv(socket, reinterpret_cast<char*>(bufferedNetwork.sdrs[l].indices.data()), bufferedNetwork.sdrs[l].indices.size() * sizeof(sf::Uint16));
+                recv(socket, bufferedNetwork.sdrs[l].indices.data(), bufferedNetwork.sdrs[l].indices.size() * sizeof(sf::Uint16));
             }
 
             // Number of fields
             sf::Uint16 numFields;
 
-            recv(socket, reinterpret_cast<char*>(&numFields), sizeof(sf::Uint16));
+            recv(socket, &numFields, sizeof(sf::Uint16));
             
             bufferedNetwork.fields.resize(numFields);
 
             for (int f = 0; f < numFields; f++) {
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.fields[f].name), sizeof(bufferedNetwork.fields[f].name));
-                recv(socket, reinterpret_cast<char*>(&bufferedNetwork.fields[f].fieldSize), sizeof(sf::Vector3i));
+                recv(socket, &bufferedNetwork.fields[f].name, sizeof(bufferedNetwork.fields[f].name));
+                recv(socket, &bufferedNetwork.fields[f].fieldSize, sizeof(sf::Vector3i));
                 int totalSize = bufferedNetwork.fields[f].fieldSize.x * bufferedNetwork.fields[f].fieldSize.y * bufferedNetwork.fields[f].fieldSize.z;
 
                 bufferedNetwork.fields[f].field.resize(totalSize);
-                recv(socket, reinterpret_cast<char*>(bufferedNetwork.fields[f].field.data()), bufferedNetwork.fields[f].field.size() * sizeof(float));
+                recv(socket, bufferedNetwork.fields[f].field.data(), bufferedNetwork.fields[f].field.size() * sizeof(float));
             }
         }
     }
@@ -342,7 +342,7 @@ int main() {
             network = bufferedNetwork;
 
             // Send Caret
-            socket.send(reinterpret_cast<char*>(&caret), sizeof(Caret));
+            socket.send(&caret, sizeof(Caret));
 
             // Init
             if (layerCSDRVis.empty()) {
