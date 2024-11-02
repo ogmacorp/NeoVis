@@ -52,7 +52,7 @@ v.create(54000) # Port
 # ...
 
 # In simulation loop:
-v.update(cs, h, [enc]) # Visualize hierarchy h and pre-encoder enc
+v.update(h, [enc]) # Visualize hierarchy h and pre-encoder enc
 
 ```
 
