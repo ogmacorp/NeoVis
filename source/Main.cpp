@@ -364,9 +364,9 @@ int main() {
                 layerCSDRVis[l].draw();
 
                 if (l < network.numEncs)
-                    ImGui::Begin(("Pre-encoder " + std::to_string(l)).c_str());
+                    ImGui::Begin(("Pre-encoder " + std::to_string(l)).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
                 else
-                    ImGui::Begin(("Layer " + std::to_string(l - network.numEncs)).c_str());
+                    ImGui::Begin(("Layer " + std::to_string(l - network.numEncs)).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
                 bool hovering;
                 int hoverX = -1;
@@ -402,7 +402,7 @@ int main() {
                 // Make sure is in range
                 fieldZs[i] = std::min(network.fields[i].fieldSize.z - 1, std::max(0, fieldZs[i]));
 
-                int empty = network.fields[i].fieldSize.x * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z == 0;
+                int empty = (fieldSize.x * fieldSize.y * fieldSize.z) == 0;
 
                 sf::Image wImg;
 
@@ -410,18 +410,14 @@ int main() {
                     wImg.create(1, 1);
                 else {
                     // If can use RGB for pre-encoder
-                    if ((network.fields[i].fieldSize.z == 3 || network.fields[i].fieldSize.z == 6) && caret.layer < network.numEncs) {
-                        wImg.create(network.fields[i].fieldSize.z == 6 ? fieldSize.x * 2 : fieldSize.x, fieldSize.y, sf::Color::Black);
+                    if (fieldSize.z == 3 && caret.layer < network.numEncs) {
+                        wImg.create(fieldSize.x, fieldSize.y, sf::Color::Black);
 
                         for (int x = 0; x < wImg.getSize().x; x++)
                             for (int y = 0; y < wImg.getSize().y; y++) {
-                                int offset = x >= fieldSize.x ? 3 : 0;
-
-                                int rx = x % fieldSize.x;
-
-                                int indexR = 0 + offset + y * network.fields[i].fieldSize.z + rx * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
-                                int indexG = 1 + offset + y * network.fields[i].fieldSize.z + rx * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
-                                int indexB = 2 + offset + y * network.fields[i].fieldSize.z + rx * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
+                                int indexR = 0 + 3 * (y + fieldSize.y * x);
+                                int indexG = 1 + 3 * (y + fieldSize.y * x);
+                                int indexB = 2 + 3 * (y + fieldSize.y * x);
 
                                 field_type r = network.fields[i].field[indexR];
                                 field_type g = network.fields[i].field[indexG];
@@ -450,7 +446,7 @@ int main() {
 
                 std::string name = network.fields[i].name.data();
 
-                ImGui::Begin(name.c_str());
+                ImGui::Begin(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
                 bool hovering;
                 int hoverX = -1;
