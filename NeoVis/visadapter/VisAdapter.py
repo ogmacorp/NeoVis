@@ -151,7 +151,7 @@ class VisAdapter:
 
                     if self.caret is not None:
                         layer_index = int(self.caret[0])
-                        pos = tuple(*self.caret[1:4])
+                        pos = (self.caret[1], self.caret[2], self.caret[3])
                     
                         if layer_index < num_encs:
                             enc_index = layer_index
@@ -188,7 +188,7 @@ class VisAdapter:
                             bfield += struct.pack("iii", field_size[0], field_size[1], field_size[2])
 
                             for i in range(field_size[0] * field_size[1] * field_size[2]):
-                                bfield += struct.pack("f", field[i])
+                                bfield += struct.pack("B", field[i])
 
                             b += bfield
                     else:
@@ -204,12 +204,12 @@ class VisAdapter:
 
                             bfield += bname
 
-                            field, field_size = h.get_encoder_receptive_field(layerIndex - num_encs, f, pos)
+                            field, field_size = h.get_encoder_receptive_field(layer_index - num_encs, f, pos)
      
                             bfield += struct.pack("iii", field_size[0], field_size[1], field_size[2])
 
                             for i in range(field_size[0] * field_size[1] * field_size[2]):
-                                bfield += struct.pack("f", field[i])
+                                bfield += struct.pack("B", field[i])
 
                             b += bfield
 

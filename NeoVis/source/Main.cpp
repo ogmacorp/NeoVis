@@ -23,6 +23,8 @@
 
 const int maxStr = 128;
 
+typedef unsigned char field_type;
+
 enum ConnectionStatus {
     disconnected, connected, connecting
 };
@@ -126,7 +128,7 @@ struct Caret {
     {}
 };
 
-struct SDR {
+struct CSDR {
     sf::Uint16 width, height, columnSize;
     std::vector<sf::Uint16> indices;
 };
@@ -134,13 +136,13 @@ struct SDR {
 struct Field {
     std::array<char, 64> name;
     sf::Vector3i fieldSize;
-    std::vector<float> field;
+    std::vector<field_type> field;
 };
 
 struct Network {
     sf::Uint16 numLayers;
     sf::Uint16 numEncs; // Number of layers that are encodeers
-    std::vector<SDR> sdrs;
+    std::vector<CSDR> sdrs;
 
     std::vector<Field> fields;
 
@@ -202,7 +204,7 @@ void receiveThreadFunc(sf::TcpSocket* socket) {
                 int totalSize = bufferedNetwork.fields[f].fieldSize.x * bufferedNetwork.fields[f].fieldSize.y * bufferedNetwork.fields[f].fieldSize.z;
 
                 bufferedNetwork.fields[f].field.resize(totalSize);
-                recv(socket, bufferedNetwork.fields[f].field.data(), bufferedNetwork.fields[f].field.size() * sizeof(float));
+                recv(socket, bufferedNetwork.fields[f].field.data(), bufferedNetwork.fields[f].field.size() * sizeof(field_type));
             }
         }
     }
@@ -354,7 +356,7 @@ int main() {
 
             // Visualize content
             for (int l = 0; l < network.numLayers; l++) {
-                SDR &sdr = network.sdrs[l];
+                CSDR &sdr = network.sdrs[l];
 
                 for (int i = 0; i < sdr.indices.size(); i++)
                     layerCSDRVis[l][i] = sdr.indices[i];
@@ -421,13 +423,9 @@ int main() {
                                 int indexG = 1 + offset + y * network.fields[i].fieldSize.z + rx * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
                                 int indexB = 2 + offset + y * network.fields[i].fieldSize.z + rx * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
 
-                                float valueR = network.fields[i].field[indexR];
-                                float valueG = network.fields[i].field[indexG];
-                                float valueB = network.fields[i].field[indexB];
-
-                                sf::Uint8 r = std::min(1.0f, std::max(0.0f, valueR)) * 255;
-                                sf::Uint8 g = std::min(1.0f, std::max(0.0f, valueG)) * 255;
-                                sf::Uint8 b = std::min(1.0f, std::max(0.0f, valueB)) * 255;
+                                field_type r = network.fields[i].field[indexR];
+                                field_type g = network.fields[i].field[indexG];
+                                field_type b = network.fields[i].field[indexB];
 
                                 wImg.setPixel(x, y, sf::Color(r, g, b));
                             }
@@ -439,14 +437,9 @@ int main() {
                             for (int y = 0; y < wImg.getSize().y; y++) {
                                 int index = fieldZs[i] + y * network.fields[i].fieldSize.z + x * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
 
-                                float value = network.fields[i].field[index];
+                                field_type value = network.fields[i].field[index];
 
-                                if (caret.layer >= network.numEncs)
-                                    value = std::exp(value); // Transform for ESR encoder
-
-                                sf::Uint8 g = std::min(1.0f, std::max(0.0f, value)) * 255;
-
-                                wImg.setPixel(x, y, sf::Color(g, g, g));
+                                wImg.setPixel(x, y, sf::Color(value, value, value));
                             }
                     }
                 }
