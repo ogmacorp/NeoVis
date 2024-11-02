@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  NeoVis
-//  Copyright(c) 2017-2020 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2017-2024 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of NeoVis is licensed to you under the terms described
 //  in the NEOVIS_LICENSE.md file included in this distribution.
@@ -46,7 +46,7 @@ public:
     int highlightX, highlightY;
 
     CSDRVis()
-        : edgeRadius(4.0f), nodeSpaceSize(16.0f), nodeOuterRatio(0.85f), nodeInnerRatio(0.75f),
+        : edgeRadius(2.0f), nodeSpaceSize(8.0f), nodeOuterRatio(0.85f), nodeInnerRatio(0.75f),
         edgeSegments(16), nodeOuterSegments(16), nodeInnerSegments(16),
         backgroundColor0(98, 98, 98), backgroundColor1(168, 168, 168), nodeOuterColor(64, 64, 64), nodeInnerColor(255, 0, 0),
         nodeInnerColorHighlight(0, 255, 0),

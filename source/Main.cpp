@@ -1,6 +1,6 @@
 // ----------------------------------------------------------------------------
 //  NeoVis
-//  Copyright(c) 2017-2020 Ogma Intelligent Systems Corp. All rights reserved.
+//  Copyright(c) 2017-2024 Ogma Intelligent Systems Corp. All rights reserved.
 //
 //  This copy of NeoVis is licensed to you under the terms described
 //  in the NEOVIS_LICENSE.md file included in this distribution.
@@ -222,9 +222,9 @@ int main() {
 
     window.resetGLStates();
 
-    sf::Texture logoTex;
-    logoTex.loadFromFile("resources/logo.png");
-    logoTex.setSmooth(true);
+    //sf::Texture logoTex;
+    //logoTex.loadFromFile("resources/logo.png");
+    //logoTex.setSmooth(true);
 
     // ---------------------------- State ---------------------------
 
@@ -480,14 +480,13 @@ int main() {
 
         window.clear(sf::Color(50, 50, 50));
 
-        sf::Sprite logoSprite;
-        logoSprite.setTexture(logoTex);
-        logoSprite.setOrigin(sf::Vector2f(logoTex.getSize().x * 0.5f, logoTex.getSize().y * 0.5f));
-        logoSprite.setPosition(sf::Vector2f(window.getSize().x * 0.5f, window.getSize().y * 0.5f));
-        logoSprite.setColor(sf::Color(255, 255, 255, 80));
-        //logoSprite.setScale(sf::Vector2f(1.0f, 1.0f));
+        //sf::Sprite logoSprite;
+        //logoSprite.setTexture(logoTex);
+        //logoSprite.setOrigin(sf::Vector2f(logoTex.getSize().x * 0.5f, logoTex.getSize().y * 0.5f));
+        //logoSprite.setPosition(sf::Vector2f(window.getSize().x * 0.5f, window.getSize().y * 0.5f));
+        //logoSprite.setColor(sf::Color(255, 255, 255, 80));
 
-        window.draw(logoSprite);
+        //window.draw(logoSprite);
 
         window.resetGLStates();
 

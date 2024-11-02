@@ -1,6 +1,6 @@
 <!---
   NeoVis
-  Copyright(c) 2017-2019 Ogma Intelligent Systems Corp. All rights reserved.
+  Copyright(c) 2017-2024 Ogma Intelligent Systems Corp. All rights reserved.
 
   This copy of NeoVis is licensed to you under the terms described
   in the NEOVIS_LICENSE.md file included in this distribution.
@@ -10,15 +10,15 @@
 
 [![Join the chat at https://gitter.im/ogmaneo/Lobby](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/ogmaneo/Lobby)
 
-**New! Now works with [OgmaNeo2](https://github.com/ogmacorp/OgmaNeo2) (through [PyOgmaNeo2](https://github.com/ogmacorp/PyOgmaNeo2.git))!**
+**New! Now works with [AOgmaNeo](https://github.com/ogmacorp/AOgmaNeo) (through [PyAOgmaNeo](https://github.com/ogmacorp/PyAOgmaNeo.git))!**
 
-NeoVis is a visualizer for [OgmaNeo2](https://github.com/ogmacorp/OgmaNeo2) (using the Python interface, [PyOgmaNeo2](https://github.com/ogmacorp/PyOgmaNeo2.git)) hierarchies, built using 'dear imgui' (AKA [ImGui](https://github.com/ocornut/imgui)) and the Simple and Fast Multimedia Library (AKA [SFML](https://www.sfml-dev.org/)).
+NeoVis is a visualizer for [AOgmaNeo](https://github.com/ogmacorp/AOgmaNeo) (using the Python interface, [PyAOgmaNeo](https://github.com/ogmacorp/PyAOgmaNeo.git)) hierarchies, built using 'dear imgui' ([ImGui](https://github.com/ocornut/imgui)) and the Simple and Fast Multimedia Library ([SFML](https://www.sfml-dev.org/)).
 
 ![Screenshot](./neovis_screen.png)
 
 ## Overview
 
-NeoVis is an application that allows one to visualize in real-time the contents of an OgmaNeo2 hierarchy. It uses sockets to communicate with the client program. It can be connected and disconnected seamlessly, provided the client code contains the appropriate visualization update function.
+NeoVis is an application that allows one to visualize in real-time the contents of an AOgmaNeo hierarchy. It uses sockets to communicate with the client program. It can be connected and disconnected seamlessly, provided the client code contains the appropriate visualization update function.
 
 ## Building
 
@@ -39,24 +39,10 @@ Version 3.1, and upwards, of [CMake](https://cmake.org/) is the required version
 
 ## Client code
 
-Include visadapter/VisAdapter.py into your Python code by whichever method you prefer. Then:
+Include visadapter/visadapter.py into your Python code by whichever method you prefer. Then:
 
 ```python
-from visadapter.VisAdapter import VisAdapter
-
-# ...
-
-cs = pyogmaneo.PyComputeSystem(...)
-
-# ...
-
-h = pyogmaneo.PyHierarchy(...)
-
-# ...
-
-enc = pyogmaneo.PyImageEncoder(...)
-
-# ...
+from visadapter.visadapter import VisAdapter
 
 # Initialize the VisAdapter
 v = VisAdapter()
@@ -66,7 +52,7 @@ v.create(54000) # Port
 # ...
 
 # In simulation loop:
-v.update(cs, h, [ enc ]) # Visualize hierarchy h and pre-encoder enc
+v.update(cs, h, [enc]) # Visualize hierarchy h and pre-encoder enc
 
 ```
 
@@ -83,7 +69,7 @@ At the moment, CSDR and feed-forward weight matrix visualizations are the only f
 
 ## Note
 
-Please note that the visualizer only works with simulation-like environments. It assumes that the client is running in real-time, and it streams whatever the latest state is for visualization. This makes is particularly handy for visualizing the OgmaNeo2 hierarchy during reinforcement-learning-like tasks and other realtime applications.
+Please note that the visualizer only works with simulation-like environments. It assumes that the client is running in real-time, and it streams whatever the latest state is for visualization. This makes is particularly handy for visualizing the AOgmaNeo hierarchy during reinforcement-learning-like tasks and other realtime applications.
 
 ## Contributions
 
@@ -98,4 +84,4 @@ SFML license https://github.com/SFML/SFML/blob/master/license.md
 
 Contact Ogma via licenses@ogmacorp.com to discuss commercial use and licensing options.
 
-NeoVis Copyright (c) 2017-2019 [Ogma Intelligent Systems Corp](https://ogmacorp.com). All rights reserved.
+NeoVis Copyright (c) 2017-2024 [Ogma Intelligent Systems Corp](https://ogmacorp.com). All rights reserved.
