@@ -9,7 +9,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui-SFML.h"
 #include "imgui_extra.h"
-#include "CSDRVis.h"
+#include "CSDR_Vis.h"
 
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
@@ -21,58 +21,62 @@
 #include <fstream>
 #include <iostream>
 
-const int maxStr = 128;
+const int max_str = 128;
 
 typedef unsigned char field_type;
 
-enum ConnectionStatus {
+enum Connection_Status {
     disconnected, connected, connecting
 };
 
-ConnectionStatus connectionStatus;
-std::string addressStr;
-std::string portStr;
+Connection_Status connection_status;
+std::string address_str;
+std::string port_str;
 
-std::unique_ptr<std::thread> connectThread;
-std::unique_ptr<std::thread> receiveThread;
+std::unique_ptr<std::thread> connect_thread;
+std::unique_ptr<std::thread> receive_thread;
 
-bool stopReceiving = false;
+bool stop_receiving = false;
 
-void receiveThreadFunc(sf::TcpSocket* socket);
+void receive_thread_func(
+    sf::TcpSocket* socket
+);
 
-void endReceiving() {
-    if (receiveThread != nullptr) {
-        stopReceiving = true;
+void enc_receiving() {
+    if (receive_thread != nullptr) {
+        stop_receiving = true;
 
-        receiveThread->join();
+        receive_thread->join();
 
-        stopReceiving = false;
+        stop_receiving = false;
     }
 }
 
-void connectThreadFunc(sf::TcpSocket* socket) {
-    connectionStatus = connecting;
+void connect_thread_func(
+    sf::TcpSocket* socket
+) {
+    connection_status = connecting;
 
-    std::string shortAddress = addressStr;
+    std::string shortAddress = address_str;
 
-    int addressLength;
+    int address_length;
 
-    for (addressLength = 0; addressLength < shortAddress.size(); addressLength++) {
-        if (shortAddress[addressLength] == ' ' || shortAddress[addressLength] == '\0')
+    for (address_length = 0; address_length < shortAddress.size(); address_length++) {
+        if (shortAddress[address_length] == ' ' || shortAddress[address_length] == '\0')
             break;
     }
 
-    shortAddress.resize(addressLength);
+    shortAddress.resize(address_length);
 
     int port;
 
     try {
-        port = std::stoi(portStr);
+        port = std::stoi(port_str);
     }
     catch (std::exception e) {
         std::cout << "Invalid port!";
 
-        connectionStatus = disconnected;
+        connection_status = disconnected;
 
         return;
     }
@@ -82,20 +86,20 @@ void connectThreadFunc(sf::TcpSocket* socket) {
     sf::Socket::Status status = socket->connect(shortAddress, port, sf::seconds(5.0f));
     
     if (status == sf::Socket::Status::Done) {
-        connectionStatus = connected;
+        connection_status = connected;
 
         std::cout << "Connection established!" << std::endl;
 
-        if (receiveThread != nullptr)
-            endReceiving();
+        if (receive_thread != nullptr)
+            enc_receiving();
 
         // Start receiving
-        receiveThread.reset(new std::thread(receiveThreadFunc, socket));
+        receive_thread.reset(new std::thread(receive_thread_func, socket));
 
         return;
     }
     else {
-        connectionStatus = disconnected;
+        connection_status = disconnected;
 
         std::cout << "Connection failed! Reason:" << std::endl;
 
@@ -129,7 +133,7 @@ struct Caret {
 };
 
 struct CSDR {
-    sf::Uint16 width, height, columnSize;
+    sf::Uint16 width, height, column_size;
     std::vector<sf::Uint16> indices;
 };
 
@@ -140,71 +144,72 @@ struct Field {
 };
 
 struct Network {
-    sf::Uint16 numLayers;
-    sf::Uint16 numEncs; // Number of layers that are encodeers
-    std::vector<CSDR> sdrs;
+    sf::Uint16 num_layers;
+    sf::Uint16 num_encs; // Number of layers that are encodeers
+    std::vector<CSDR> csdrs;
 
     std::vector<Field> fields;
 
     Network()
-    : numLayers(0)
+    :
+    num_layers(0)
     {}
 };
 
-Network bufferedNetwork;
+Network buffered_network;
 Network network;
 Caret caret;
 
 bool recv(sf::TcpSocket* socket, void* data, int size) {
-    int numReceived = 0;
+    int num_received = 0;
 
-    while (numReceived < size) {
+    while (num_received < size) {
         size_t received;
 
-        sf::Socket::Status s = socket->receive(&reinterpret_cast<char*>(data)[numReceived], size - numReceived, received);
+        sf::Socket::Status s = socket->receive(&reinterpret_cast<char*>(data)[num_received], size - num_received, received);
 
         if (s != sf::Socket::Status::Done) {
-            connectionStatus = disconnected;
+            connection_status = disconnected;
             return false;
         }
             
-        numReceived += received;
+        num_received += received;
     }
 
     return true;
 }
 
-void receiveThreadFunc(sf::TcpSocket* socket) {
-    while (!stopReceiving) {
-        if (recv(socket, &bufferedNetwork.numLayers, sizeof(sf::Uint16))) {
-            recv(socket, &bufferedNetwork.numEncs, sizeof(sf::Uint16));
+void receive_thread_func(sf::TcpSocket* socket) {
+    while (!stop_receiving) {
+        if (recv(socket, &buffered_network.num_layers, sizeof(sf::Uint16))) {
+            recv(socket, &buffered_network.num_encs, sizeof(sf::Uint16));
 
-            bufferedNetwork.sdrs.resize(bufferedNetwork.numLayers);
+            buffered_network.csdrs.resize(buffered_network.num_layers);
 
-            for (int l = 0; l < bufferedNetwork.numLayers; l++) {
-                recv(socket, &bufferedNetwork.sdrs[l].width, sizeof(sf::Uint16));
-                recv(socket, &bufferedNetwork.sdrs[l].height, sizeof(sf::Uint16));
-                recv(socket, &bufferedNetwork.sdrs[l].columnSize, sizeof(sf::Uint16));
+            for (int l = 0; l < buffered_network.num_layers; l++) {
+                recv(socket, &buffered_network.csdrs[l].width, sizeof(sf::Uint16));
+                recv(socket, &buffered_network.csdrs[l].height, sizeof(sf::Uint16));
+                recv(socket, &buffered_network.csdrs[l].column_size, sizeof(sf::Uint16));
 
-                bufferedNetwork.sdrs[l].indices.resize(bufferedNetwork.sdrs[l].width * bufferedNetwork.sdrs[l].height);
+                buffered_network.csdrs[l].indices.resize(buffered_network.csdrs[l].width * buffered_network.csdrs[l].height);
                 
-                recv(socket, bufferedNetwork.sdrs[l].indices.data(), bufferedNetwork.sdrs[l].indices.size() * sizeof(sf::Uint16));
+                recv(socket, buffered_network.csdrs[l].indices.data(), buffered_network.csdrs[l].indices.size() * sizeof(sf::Uint16));
             }
 
             // Number of fields
-            sf::Uint16 numFields;
+            sf::Uint16 num_fields;
 
-            recv(socket, &numFields, sizeof(sf::Uint16));
+            recv(socket, &num_fields, sizeof(sf::Uint16));
             
-            bufferedNetwork.fields.resize(numFields);
+            buffered_network.fields.resize(num_fields);
 
-            for (int f = 0; f < numFields; f++) {
-                recv(socket, &bufferedNetwork.fields[f].name, sizeof(bufferedNetwork.fields[f].name));
-                recv(socket, &bufferedNetwork.fields[f].fieldSize, sizeof(sf::Vector3i));
-                int totalSize = bufferedNetwork.fields[f].fieldSize.x * bufferedNetwork.fields[f].fieldSize.y * bufferedNetwork.fields[f].fieldSize.z;
+            for (int f = 0; f < num_fields; f++) {
+                recv(socket, &buffered_network.fields[f].name, sizeof(buffered_network.fields[f].name));
+                recv(socket, &buffered_network.fields[f].fieldSize, sizeof(sf::Vector3i));
+                int totalSize = buffered_network.fields[f].fieldSize.x * buffered_network.fields[f].fieldSize.y * buffered_network.fields[f].fieldSize.z;
 
-                bufferedNetwork.fields[f].field.resize(totalSize);
-                recv(socket, bufferedNetwork.fields[f].field.data(), bufferedNetwork.fields[f].field.size() * sizeof(field_type));
+                buffered_network.fields[f].field.resize(totalSize);
+                recv(socket, buffered_network.fields[f].field.data(), buffered_network.fields[f].field.size() * sizeof(field_type));
             }
         }
     }
@@ -228,37 +233,37 @@ int main() {
 
     // ---------------------------- State ---------------------------
 
-    bool connectionWizardOpen = false;
+    bool connection_wizard_open = false;
 
     // Read address and port
-    std::ifstream fromConfig("config.txt");
+    std::ifstream from_config("config.txt");
 
-    if (!fromConfig.is_open()) {
+    if (!from_config.is_open()) {
         std::cout << "Could not open config file!" << std::endl;
 
         return 0;
     }
 
-    std::getline(fromConfig, addressStr);
-    std::getline(fromConfig, portStr);
+    std::getline(from_config, address_str);
+    std::getline(from_config, port_str);
 
-    addressStr.resize(maxStr);
-    portStr.resize(maxStr);
+    address_str.resize(max_str);
+    port_str.resize(max_str);
 
-    std::vector<CSDRVis> layerCSDRVis;
-    std::vector<sf::Texture> fieldTextures;
-    std::vector<int> fieldZs;
+    std::vector<CSDR_Vis> layer_CSDR_vis;
+    std::vector<sf::Texture> field_textures;
+    std::vector<int> field_zs;
 
     sf::TcpSocket socket;
 
     // ---------------------------- Loop ----------------------------
 
-    sf::Clock deltaClock;
+    sf::Clock delta_clock;
 
     while (window.isOpen()) {
         sf::Event event;
 
-        int mouseWheelDelta = 0;
+        int mouse_wheel_delta = 0;
 
         while (window.pollEvent(event)) {
             ImGui::SFML::ProcessEvent(event);
@@ -269,17 +274,17 @@ int main() {
                     break;
 
                 case sf::Event::MouseWheelMoved:
-                    mouseWheelDelta = event.mouseWheel.delta;
+                    mouse_wheel_delta = event.mouseWheel.delta;
                     break;
             }
         }
 
-        ImGui::SFML::Update(window, deltaClock.restart());
+        ImGui::SFML::Update(window, delta_clock.restart());
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Connection")) {
                 if (ImGui::MenuItem("Connect...")) {
-                    connectionWizardOpen = true;
+                    connection_wizard_open = true;
                 }
 
                 ImGui::EndMenu();
@@ -288,133 +293,133 @@ int main() {
             ImGui::EndMainMenuBar();
         }
 
-        if (connectionWizardOpen) {
+        if (connection_wizard_open) {
             bool open = true;
 
             if (ImGui::Begin("Connection Wizard", &open)) {
-                ImGui::InputText("Address", &addressStr[0], addressStr.size());
+                ImGui::InputText("Address", &address_str[0], address_str.size());
                 
                 ImGui::NewLine();
                 
-                ImGui::InputText("Port", &portStr[0], portStr.size());
+                ImGui::InputText("Port", &port_str[0], port_str.size());
 
                 ImGui::NewLine();
 
-                std::string statusStr;
+                std::string status_str;
                 
-                switch (connectionStatus) {
+                switch (connection_status) {
                 case connected:
-                    statusStr = "Connected!";
+                    status_str = "Connected!";
                     break;
                 case connecting:
-                    statusStr = "Connecting...";
+                    status_str = "Connecting...";
                     break;
                 case disconnected:
-                    statusStr = "Disconnected.";
+                    status_str = "Disconnected.";
                     break;
                 }
 
                 if (ImGui::Button("Connect!")) {
-                    if (connectThread != nullptr)
-                        connectThread->join();
+                    if (connect_thread != nullptr)
+                        connect_thread->join();
 
-                    connectThread.reset(new std::thread(connectThreadFunc, &socket));
+                    connect_thread.reset(new std::thread(connect_thread_func, &socket));
                     
                     // Save configuration
-                    std::ofstream toConfig("config.txt");
+                    std::ofstream to_config("config.txt");
 
-                    toConfig << addressStr << std::endl;
-                    toConfig << portStr << std::endl;
+                    to_config << address_str << std::endl;
+                    to_config << port_str << std::endl;
                 }
 
-                ImGui::LabelText("Status", statusStr.c_str());
+                ImGui::LabelText("Status", status_str.c_str());
 
                 ImGui::End();
             }
             
             if (!open)
-                connectionWizardOpen = false;
+                connection_wizard_open = false;
         }
 
-        if (connectionStatus == disconnected) {
-            layerCSDRVis.clear();
-            fieldTextures.clear();
+        if (connection_status == disconnected) {
+            layer_CSDR_vis.clear();
+            field_textures.clear();
         }
-        else if (connectionStatus == connected) {
-            network = bufferedNetwork;
+        else if (connection_status == connected) {
+            network = buffered_network;
 
             // Send Caret
             socket.send(&caret, sizeof(Caret));
 
             // Init
-            if (layerCSDRVis.empty()) {
-                layerCSDRVis.resize(network.numLayers);
+            if (layer_CSDR_vis.empty()) {
+                layer_CSDR_vis.resize(network.num_layers);
 
-                for (int l = 0; l < network.numLayers; l++)
-                    layerCSDRVis[l].init(network.sdrs[l].width, network.sdrs[l].height, network.sdrs[l].columnSize);
+                for (int l = 0; l < network.num_layers; l++)
+                    layer_CSDR_vis[l].init(network.csdrs[l].width, network.csdrs[l].height, network.csdrs[l].column_size);
             }
 
             // Visualize content
-            for (int l = 0; l < network.numLayers; l++) {
-                CSDR &sdr = network.sdrs[l];
+            for (int l = 0; l < network.num_layers; l++) {
+                CSDR &sdr = network.csdrs[l];
 
                 for (int i = 0; i < sdr.indices.size(); i++)
-                    layerCSDRVis[l][i] = sdr.indices[i];
+                    layer_CSDR_vis[l][i] = sdr.indices[i];
 
-                layerCSDRVis[l].draw();
+                layer_CSDR_vis[l].draw();
 
-                if (l < network.numEncs)
+                if (l < network.num_encs)
                     ImGui::Begin(("Pre-encoder " + std::to_string(l)).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
                 else
-                    ImGui::Begin(("Layer " + std::to_string(l - network.numEncs)).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+                    ImGui::Begin(("Layer " + std::to_string(l - network.num_encs)).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
                 bool hovering;
-                int hoverX = -1;
-                int hoverY = -1;
+                int hover_x = -1;
+                int hover_y = -1;
 
-                ImGui::ImageHover(layerCSDRVis[l].getTexture(), hovering, hoverX, hoverY, ImVec2(layerCSDRVis[l].getTexture().getSize().x, layerCSDRVis[l].getTexture().getSize().y));
+                ImGui::ImageHover(layer_CSDR_vis[l].get_texture(), hovering, hover_x, hover_y, ImVec2(layer_CSDR_vis[l].get_texture().getSize().x, layer_CSDR_vis[l].get_texture().getSize().y));
 
                 if (hovering) {
                     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
                         // Divide by size
-                        layerCSDRVis[l].highlightX = static_cast<int>(hoverX / layerCSDRVis[l].nodeSpaceSize);
-                        layerCSDRVis[l].highlightY = layerCSDRVis[l].getSizeInNodes().y - static_cast<int>(hoverY / layerCSDRVis[l].nodeSpaceSize + 1.0f);
+                        layer_CSDR_vis[l].highlight_x = static_cast<int>(hover_x / layer_CSDR_vis[l].node_space_size);
+                        layer_CSDR_vis[l].highlight_y = layer_CSDR_vis[l].get_size_in_nodes().y - static_cast<int>(hover_y / layer_CSDR_vis[l].node_space_size + 1.0f);
 
-                        caret.pos = layerCSDRVis[l].getHighlightedCSDRPos();
+                        caret.pos = layer_CSDR_vis[l].get_highlighted_CSDR_pos();
                         caret.layer = l;
                     }
                 }
                 else {
-                    layerCSDRVis[l].highlightX = -1;
-                    layerCSDRVis[l].highlightY = -1;
+                    layer_CSDR_vis[l].highlight_x = -1;
+                    layer_CSDR_vis[l].highlight_y = -1;
                 }
     
                 ImGui::End();
             }
 
             // Show contents of caret position
-            fieldTextures.resize(network.fields.size());
-            fieldZs.resize(network.fields.size(), 0);
+            field_textures.resize(network.fields.size());
+            field_zs.resize(network.fields.size(), 0);
 
             for (int i = 0; i < network.fields.size(); i++) {
                 sf::Vector3i fieldSize = network.fields[i].fieldSize;
 
                 // Make sure is in range
-                fieldZs[i] = std::min(network.fields[i].fieldSize.z - 1, std::max(0, fieldZs[i]));
+                field_zs[i] = std::min(network.fields[i].fieldSize.z - 1, std::max(0, field_zs[i]));
 
                 int empty = (fieldSize.x * fieldSize.y * fieldSize.z) == 0;
 
-                sf::Image wImg;
+                sf::Image w_img;
 
                 if (empty)
-                    wImg.create(1, 1);
+                    w_img.create(1, 1);
                 else {
                     // If can use RGB for pre-encoder
-                    if (fieldSize.z == 3 && caret.layer < network.numEncs) {
-                        wImg.create(fieldSize.x, fieldSize.y, sf::Color::Black);
+                    if (fieldSize.z == 3 && caret.layer < network.num_encs) {
+                        w_img.create(fieldSize.x, fieldSize.y, sf::Color::Black);
 
-                        for (int x = 0; x < wImg.getSize().x; x++)
-                            for (int y = 0; y < wImg.getSize().y; y++) {
+                        for (int x = 0; x < w_img.getSize().x; x++)
+                            for (int y = 0; y < w_img.getSize().y; y++) {
                                 int indexR = 0 + 3 * (y + fieldSize.y * x);
                                 int indexG = 1 + 3 * (y + fieldSize.y * x);
                                 int indexB = 2 + 3 * (y + fieldSize.y * x);
@@ -423,47 +428,47 @@ int main() {
                                 field_type g = network.fields[i].field[indexG];
                                 field_type b = network.fields[i].field[indexB];
 
-                                wImg.setPixel(x, y, sf::Color(r, g, b));
+                                w_img.setPixel(x, y, sf::Color(r, g, b));
                             }
                     }
                     else { // Seperate channels
-                        wImg.create(fieldSize.x, fieldSize.y, sf::Color::Black);
+                        w_img.create(fieldSize.x, fieldSize.y, sf::Color::Black);
 
-                        for (int x = 0; x < wImg.getSize().x; x++)
-                            for (int y = 0; y < wImg.getSize().y; y++) {
-                                int index = fieldZs[i] + y * network.fields[i].fieldSize.z + x * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
+                        for (int x = 0; x < w_img.getSize().x; x++)
+                            for (int y = 0; y < w_img.getSize().y; y++) {
+                                int index = field_zs[i] + y * network.fields[i].fieldSize.z + x * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
 
                                 field_type value = network.fields[i].field[index];
 
-                                wImg.setPixel(x, y, sf::Color(value, value, value));
+                                w_img.setPixel(x, y, sf::Color(value, value, value));
                             }
                     }
                 }
 
-                fieldTextures[i].loadFromImage(wImg);
+                field_textures[i].loadFromImage(w_img);
 
-                fieldTextures[i].setSmooth(false);
+                field_textures[i].setSmooth(false);
 
                 std::string name = network.fields[i].name.data();
 
                 ImGui::Begin(name.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
                 bool hovering;
-                int hoverX = -1;
-                int hoverY = -1;
+                int hover_x = -1;
+                int hover_y = -1;
 
-                ImGui::ImageHover(fieldTextures[i], hovering, hoverX, hoverY, ImVec2(8.0f * wImg.getSize().x, 8.0f * wImg.getSize().y));
+                ImGui::ImageHover(field_textures[i], hovering, hover_x, hover_y, ImVec2(8.0f * w_img.getSize().x, 8.0f * w_img.getSize().y));
 
                 if (hovering) {
                     // Select field Z
-                    fieldZs[i] = std::min(network.fields[i].fieldSize.z - 1, std::max(0, fieldZs[i] + mouseWheelDelta));
+                    field_zs[i] = std::min(network.fields[i].fieldSize.z - 1, std::max(0, field_zs[i] + mouse_wheel_delta));
 
                     ImGui::BeginTooltip();
 
-                    if ((network.fields[i].fieldSize.z == 3 || network.fields[i].fieldSize.z == 6) && caret.layer < network.numEncs)
+                    if ((network.fields[i].fieldSize.z == 3 || network.fields[i].fieldSize.z == 6) && caret.layer < network.num_encs)
                         ImGui::SetTooltip("RGB");
                     else
-                        ImGui::SetTooltip(("Z: " + std::to_string(fieldZs[i])).c_str());
+                        ImGui::SetTooltip(("Z: " + std::to_string(field_zs[i])).c_str());
 
                     ImGui::EndTooltip();
                 }
@@ -492,16 +497,16 @@ int main() {
 
     std:: cout << "Stopping receiving..." << std::endl;
 
-    if (receiveThread != nullptr) {
+    if (receive_thread != nullptr) {
         socket.disconnect();
 
-        endReceiving();
+        enc_receiving();
     }
 
     std:: cout << "Stopping connections..." << std::endl;
 
-    if (connectThread != nullptr)
-        connectThread->join();
+    if (connect_thread != nullptr)
+        connect_thread->join();
 
     ImGui::SFML::Shutdown();
 
