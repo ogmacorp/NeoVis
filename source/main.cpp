@@ -210,9 +210,8 @@ void receive_thread_func(sf::TcpSocket* socket) {
                 recv(socket, &buffered_network.fields[f].field_size_x, sizeof(sf::Int32));
                 recv(socket, &buffered_network.fields[f].field_size_y, sizeof(sf::Int32));
                 recv(socket, &buffered_network.fields[f].field_size_z, sizeof(sf::Int32));
-                int totalSize = buffered_network.fields[f].field_size_x * buffered_network.fields[f].field_size_y * buffered_network.fields[f].field_size_z;
 
-                buffered_network.fields[f].field.resize(totalSize);
+                buffered_network.fields[f].field.resize(buffered_network.fields[f].field_size_x * buffered_network.fields[f].field_size_y * buffered_network.fields[f].field_size_z);
                 recv(socket, buffered_network.fields[f].field.data(), buffered_network.fields[f].field.size() * sizeof(field_type));
             }
         }

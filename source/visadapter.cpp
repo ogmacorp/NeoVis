@@ -274,7 +274,7 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
                 push<sf::Int32>(data, static_cast<sf::Int32>(field_size.z));
             
                 for (int k = 0; k < field.size(); k++)
-                    push<float>(data, field[k]);
+                    push<unsigned char>(data, field[k]);
             }
         }
         else {
@@ -298,7 +298,7 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
                 push<sf::Int32>(data, static_cast<sf::Int32>(field_size.z));
             
                 for (int k = 0; k < field.size(); k++)
-                    push<float>(data, field[k]);
+                    push<unsigned char>(data, field[k]);
             }
         }
 
