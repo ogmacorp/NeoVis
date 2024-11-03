@@ -17,7 +17,7 @@ void get_receptive_field(
     int vli,
     const Int3 &pos,
     std::vector<unsigned char> &field,
-    Int3 &size
+    Int3 &field_size
 ) {
     int num_visible_layers = enc.get_num_visible_layers();
 
@@ -66,7 +66,7 @@ void get_receptive_field(
             }
         }
 
-    size = Int3(diam, diam, vld.size.z);
+    field_size = Int3(diam, diam, vld.size.z);
 }
 
 void get_encoder_receptive_field(
@@ -75,7 +75,7 @@ void get_encoder_receptive_field(
     int vli,
     const Int3 &pos,
     std::vector<unsigned char> &field,
-    Int3 &size
+    Int3 &field_size
 ) {
     const aon::Encoder &enc = h.get_encoder(l);
 
@@ -130,7 +130,7 @@ void get_encoder_receptive_field(
             }
         }
 
-    size = Int3(diam, diam, vld.size.z);
+    field_size = Int3(diam, diam, vld.size.z);
 }
 
 void add(std::vector<unsigned char> &data, size_t size) {
@@ -234,16 +234,16 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
 
                 const Image_Encoder* enc = encs[enc_index];
 
-                bool inBounds = caret.pos.x >= 0 && caret.pos.y >= 0 && caret.pos.z >= 0 &&
+                bool in_bounds = caret.pos.x >= 0 && caret.pos.y >= 0 && caret.pos.z >= 0 &&
                     caret.pos.x < enc->get_hidden_size().x && caret.pos.y < enc->get_hidden_size().y && caret.pos.z < enc->get_hidden_size().z;
 
-                num_fields = inBounds ? enc->get_num_visible_layers() : 0;
+                num_fields = in_bounds ? enc->get_num_visible_layers() : 0;
             }
             else {
-                bool inBounds = caret.pos.x >= 0 && caret.pos.y >= 0 && caret.pos.z >= 0 &&
+                bool in_bounds = caret.pos.x >= 0 && caret.pos.y >= 0 && caret.pos.z >= 0 &&
                     caret.pos.x < h.get_encoder(layer_index - encs.size()).get_hidden_size().x && caret.pos.y < h.get_encoder(layer_index - encs.size()).get_hidden_size().y && caret.pos.z < h.get_encoder(layer_index - encs.size()).get_hidden_size().z;
 
-                num_fields = inBounds ? h.get_encoder(layer_index - encs.size()).get_num_visible_layers() : 0;
+                num_fields = in_bounds ? h.get_encoder(layer_index - encs.size()).get_num_visible_layers() : 0;
             }
         }
 
@@ -255,14 +255,14 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
             const Image_Encoder* enc = encs[enc_index];
 
             for (int j = 0; j < num_fields; j++) {
-                std::string fieldName = "field " + std::to_string(j);
+                std::string field_name = "field " + std::to_string(j);
 
                 size_t start = data.size();
 
                 add(data, field_name_size);
 
                 for (int k = 0; k < field_name_size; k++)
-                    *reinterpret_cast<char*>(&data[start + k]) = (k < fieldName.length() ? fieldName[k] : '\0');
+                    *reinterpret_cast<char*>(&data[start + k]) = (k < field_name.length() ? field_name[k] : '\0');
 
                 std::vector<unsigned char> field;
                 Int3 field_size;
@@ -279,14 +279,14 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
         }
         else {
             for (int j = 0; j < num_fields; j++) {
-                std::string fieldName = "field " + std::to_string(j);
+                std::string field_name = "field " + std::to_string(j);
 
                 size_t start = data.size();
                 
                 add(data, field_name_size);
 
                 for (int k = 0; k < field_name_size; k++)
-                    *reinterpret_cast<char*>(&data[start + k]) = (k < fieldName.length() ? fieldName[k] : '\0');
+                    *reinterpret_cast<char*>(&data[start + k]) = (k < field_name.length() ? field_name[k] : '\0');
 
                 std::vector<unsigned char> field;
                 Int3 field_size;

@@ -361,10 +361,10 @@ int main() {
 
             // Visualize content
             for (int l = 0; l < network.num_layers; l++) {
-                CSDR &sdr = network.csdrs[l];
+                CSDR &csdr = network.csdrs[l];
 
-                for (int i = 0; i < sdr.indices.size(); i++)
-                    layer_CSDR_vis[l][i] = sdr.indices[i];
+                for (int i = 0; i < csdr.indices.size(); i++)
+                    layer_CSDR_vis[l][i] = csdr.indices[i];
 
                 layer_CSDR_vis[l].draw();
 

@@ -16,12 +16,11 @@ void CSDR_Vis::init(int width, int height, int column_size) {
 
     root_column_size = std::ceil(std::sqrt(static_cast<float>(column_size)));
 
-    columns.clear();
-    columns.assign(width * height, 0);
+    columns.resize(width * height, 0);
 
     float r_size = node_space_size * root_column_size;
 
-    rt.reset(new sf::RenderTexture());
+    rt = std::make_unique<sf::RenderTexture>();
 
     rt->create(static_cast<int>(std::ceil(width * r_size)), static_cast<int>(std::ceil(height * r_size)));
 }
