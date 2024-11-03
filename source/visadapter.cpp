@@ -198,7 +198,7 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
         push<sf::Uint16>(data, static_cast<sf::Uint16>(h.get_num_layers() + encs.size()));
         push<sf::Uint16>(data, static_cast<sf::Uint16>(encs.size()));
 
-        // Add encoder SDRs
+        // Add encoder CSDRs
         for (int j = 0; j < encs.size(); j++) {
             Int3 s = encs[j]->get_hidden_size();
 

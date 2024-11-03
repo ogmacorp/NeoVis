@@ -139,7 +139,9 @@ struct CSDR {
 
 struct Field {
     std::array<char, 64> name;
-    sf::Vector3i fieldSize;
+    sf::Int32 field_size_x;
+    sf::Int32 field_size_y;
+    sf::Int32 field_size_z;
     std::vector<field_type> field;
 };
 
@@ -205,8 +207,10 @@ void receive_thread_func(sf::TcpSocket* socket) {
 
             for (int f = 0; f < num_fields; f++) {
                 recv(socket, &buffered_network.fields[f].name, sizeof(buffered_network.fields[f].name));
-                recv(socket, &buffered_network.fields[f].fieldSize, sizeof(sf::Vector3i));
-                int totalSize = buffered_network.fields[f].fieldSize.x * buffered_network.fields[f].fieldSize.y * buffered_network.fields[f].fieldSize.z;
+                recv(socket, &buffered_network.fields[f].field_size_x, sizeof(sf::Int32));
+                recv(socket, &buffered_network.fields[f].field_size_y, sizeof(sf::Int32));
+                recv(socket, &buffered_network.fields[f].field_size_z, sizeof(sf::Int32));
+                int totalSize = buffered_network.fields[f].field_size_x * buffered_network.fields[f].field_size_y * buffered_network.fields[f].field_size_z;
 
                 buffered_network.fields[f].field.resize(totalSize);
                 recv(socket, buffered_network.fields[f].field.data(), buffered_network.fields[f].field.size() * sizeof(field_type));
@@ -402,12 +406,12 @@ int main() {
             field_zs.resize(network.fields.size(), 0);
 
             for (int i = 0; i < network.fields.size(); i++) {
-                sf::Vector3i fieldSize = network.fields[i].fieldSize;
+                sf::Vector3i field_size = sf::Vector3i(network.fields[i].field_size_x, network.fields[i].field_size_y, network.fields[i].field_size_z);
 
                 // Make sure is in range
-                field_zs[i] = std::min(network.fields[i].fieldSize.z - 1, std::max(0, field_zs[i]));
+                field_zs[i] = std::min(field_size.z - 1, std::max(0, field_zs[i]));
 
-                int empty = (fieldSize.x * fieldSize.y * fieldSize.z) == 0;
+                int empty = (field_size.x * field_size.y * field_size.z) == 0;
 
                 sf::Image w_img;
 
@@ -415,14 +419,14 @@ int main() {
                     w_img.create(1, 1);
                 else {
                     // If can use RGB for pre-encoder
-                    if (fieldSize.z == 3 && caret.layer < network.num_encs) {
-                        w_img.create(fieldSize.x, fieldSize.y, sf::Color::Black);
+                    if (field_size.z == 3 && caret.layer < network.num_encs) {
+                        w_img.create(field_size.x, field_size.y, sf::Color::Black);
 
                         for (int x = 0; x < w_img.getSize().x; x++)
                             for (int y = 0; y < w_img.getSize().y; y++) {
-                                int indexR = 0 + 3 * (y + fieldSize.y * x);
-                                int indexG = 1 + 3 * (y + fieldSize.y * x);
-                                int indexB = 2 + 3 * (y + fieldSize.y * x);
+                                int indexR = 0 + 3 * (y + field_size.y * x);
+                                int indexG = 1 + 3 * (y + field_size.y * x);
+                                int indexB = 2 + 3 * (y + field_size.y * x);
 
                                 field_type r = network.fields[i].field[indexR];
                                 field_type g = network.fields[i].field[indexG];
@@ -432,11 +436,11 @@ int main() {
                             }
                     }
                     else { // Seperate channels
-                        w_img.create(fieldSize.x, fieldSize.y, sf::Color::Black);
+                        w_img.create(field_size.x, field_size.y, sf::Color::Black);
 
                         for (int x = 0; x < w_img.getSize().x; x++)
                             for (int y = 0; y < w_img.getSize().y; y++) {
-                                int index = field_zs[i] + y * network.fields[i].fieldSize.z + x * network.fields[i].fieldSize.y * network.fields[i].fieldSize.z;
+                                int index = field_zs[i] + y * field_size.z + x * field_size.y * field_size.z;
 
                                 field_type value = network.fields[i].field[index];
 
@@ -461,11 +465,11 @@ int main() {
 
                 if (hovering) {
                     // Select field Z
-                    field_zs[i] = std::min(network.fields[i].fieldSize.z - 1, std::max(0, field_zs[i] + mouse_wheel_delta));
+                    field_zs[i] = std::min(network.fields[i].field_size_z - 1, std::max(0, field_zs[i] + mouse_wheel_delta));
 
                     ImGui::BeginTooltip();
 
-                    if ((network.fields[i].fieldSize.z == 3 || network.fields[i].fieldSize.z == 6) && caret.layer < network.num_encs)
+                    if ((network.fields[i].field_size_z == 3 || network.fields[i].field_size_z == 6) && caret.layer < network.num_encs)
                         ImGui::SetTooltip("RGB");
                     else
                         ImGui::SetTooltip(("Z: " + std::to_string(field_zs[i])).c_str());

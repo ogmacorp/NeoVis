@@ -20,7 +20,7 @@ class VisAdapter:
         self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        self.listener.bind(("localhost", port))
+        self.listener.bind(("0.0.0.0", port))
 
         self.listener.listen(1)
 
