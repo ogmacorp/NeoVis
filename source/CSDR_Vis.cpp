@@ -20,9 +20,7 @@ void CSDR_Vis::init(int width, int height, int column_size) {
 
     float r_size = node_space_size * root_column_size;
 
-    rt = std::make_unique<sf::RenderTexture>();
-
-    rt->create(static_cast<int>(std::ceil(width * r_size)), static_cast<int>(std::ceil(height * r_size)));
+    rt = std::make_unique<sf::RenderTexture>(sf::Vector2u(static_cast<int>(std::ceil(width * r_size)), static_cast<int>(std::ceil(height * r_size))));
 }
 
 void CSDR_Vis::draw_column(const sf::Vector2f &position, int index, bool isOdd, int cx, int cy) {

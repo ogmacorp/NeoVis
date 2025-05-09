@@ -18,7 +18,7 @@
 using namespace aon;
 
 struct Caret {
-    sf::Uint16 layer;
+    std::uint16_t layer;
     sf::Vector3i pos;
 
     Caret()

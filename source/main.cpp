@@ -6,6 +6,7 @@
 //  in the NEOVIS_LICENSE.md file included in this distribution.
 // ----------------------------------------------------------------------------
 
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui/imgui.h"
 #include "imgui/imgui-SFML.h"
 #include "imgui_extra.h"
@@ -83,7 +84,15 @@ void connect_thread_func(
 
     std::cout << "Connecting to address: \"" << shortAddress << "\" on port \"" << port << "\" ..." << std::endl;
 
-    sf::Socket::Status status = socket->connect(shortAddress, port, sf::seconds(5.0f));
+    std::optional<sf::IpAddress> addr = sf::IpAddress::resolve(shortAddress);
+
+    if (!addr.has_value()) {
+        std::cout << "Could not resolve IP address!" << std::endl;
+
+        return;
+    }
+
+    sf::Socket::Status status = socket->connect(addr.value(), port, sf::seconds(5.0f));
     
     if (status == sf::Socket::Status::Done) {
         connection_status = connected;
@@ -123,7 +132,7 @@ void connect_thread_func(
 }
 
 struct Caret {
-    sf::Uint16 layer;
+    std::uint16_t layer;
     sf::Vector3i pos;
 
     Caret()
@@ -133,21 +142,21 @@ struct Caret {
 };
 
 struct CSDR {
-    sf::Uint16 width, height, column_size;
-    std::vector<sf::Uint16> indices;
+    std::uint16_t width, height, column_size;
+    std::vector<std::uint16_t> indices;
 };
 
 struct Field {
     std::array<char, 64> name;
-    sf::Int32 field_size_x;
-    sf::Int32 field_size_y;
-    sf::Int32 field_size_z;
+    std::int32_t field_size_x;
+    std::int32_t field_size_y;
+    std::int32_t field_size_z;
     std::vector<field_type> field;
 };
 
 struct Network {
-    sf::Uint16 num_layers;
-    sf::Uint16 num_encs; // Number of layers that are encodeers
+    std::uint16_t num_layers;
+    std::uint16_t num_encs; // Number of layers that are encodeers
     std::vector<CSDR> csdrs;
 
     std::vector<Field> fields;
@@ -183,33 +192,33 @@ bool recv(sf::TcpSocket* socket, void* data, int size) {
 
 void receive_thread_func(sf::TcpSocket* socket) {
     while (!stop_receiving) {
-        if (recv(socket, &buffered_network.num_layers, sizeof(sf::Uint16))) {
-            recv(socket, &buffered_network.num_encs, sizeof(sf::Uint16));
+        if (recv(socket, &buffered_network.num_layers, sizeof(std::uint16_t))) {
+            recv(socket, &buffered_network.num_encs, sizeof(std::uint16_t));
 
             buffered_network.csdrs.resize(buffered_network.num_layers);
 
             for (int l = 0; l < buffered_network.num_layers; l++) {
-                recv(socket, &buffered_network.csdrs[l].width, sizeof(sf::Uint16));
-                recv(socket, &buffered_network.csdrs[l].height, sizeof(sf::Uint16));
-                recv(socket, &buffered_network.csdrs[l].column_size, sizeof(sf::Uint16));
+                recv(socket, &buffered_network.csdrs[l].width, sizeof(std::uint16_t));
+                recv(socket, &buffered_network.csdrs[l].height, sizeof(std::uint16_t));
+                recv(socket, &buffered_network.csdrs[l].column_size, sizeof(std::uint16_t));
 
                 buffered_network.csdrs[l].indices.resize(buffered_network.csdrs[l].width * buffered_network.csdrs[l].height);
                 
-                recv(socket, buffered_network.csdrs[l].indices.data(), buffered_network.csdrs[l].indices.size() * sizeof(sf::Uint16));
+                recv(socket, buffered_network.csdrs[l].indices.data(), buffered_network.csdrs[l].indices.size() * sizeof(std::uint16_t));
             }
 
             // Number of fields
-            sf::Uint16 num_fields;
+            std::uint16_t num_fields;
 
-            recv(socket, &num_fields, sizeof(sf::Uint16));
+            recv(socket, &num_fields, sizeof(std::uint16_t));
             
             buffered_network.fields.resize(num_fields);
 
             for (int f = 0; f < num_fields; f++) {
                 recv(socket, &buffered_network.fields[f].name, sizeof(buffered_network.fields[f].name));
-                recv(socket, &buffered_network.fields[f].field_size_x, sizeof(sf::Int32));
-                recv(socket, &buffered_network.fields[f].field_size_y, sizeof(sf::Int32));
-                recv(socket, &buffered_network.fields[f].field_size_z, sizeof(sf::Int32));
+                recv(socket, &buffered_network.fields[f].field_size_x, sizeof(std::int32_t));
+                recv(socket, &buffered_network.fields[f].field_size_y, sizeof(std::int32_t));
+                recv(socket, &buffered_network.fields[f].field_size_z, sizeof(std::int32_t));
 
                 buffered_network.fields[f].field.resize(buffered_network.fields[f].field_size_x * buffered_network.fields[f].field_size_y * buffered_network.fields[f].field_size_z);
                 recv(socket, buffered_network.fields[f].field.data(), buffered_network.fields[f].field.size() * sizeof(field_type));
@@ -219,14 +228,12 @@ void receive_thread_func(sf::TcpSocket* socket) {
 }
 
 int main() {
-    sf::RenderWindow window;
-    
-    window.create(sf::VideoMode(1280, 720), "NeoVis", sf::Style::Default);
+    sf::RenderWindow window(sf::VideoMode(sf::Vector2u(1280, 720)), "NeoVis", sf::Style::Default);
 
     window.setFramerateLimit(60);
     window.setVerticalSyncEnabled(true);
 
-    ImGui::SFML::Init(window);
+    bool initialized = ImGui::SFML::Init(window);
 
     window.resetGLStates();
 
@@ -264,22 +271,19 @@ int main() {
     sf::Clock delta_clock;
 
     while (window.isOpen()) {
-        sf::Event event;
-
         int mouse_wheel_delta = 0;
 
-        while (window.pollEvent(event)) {
-            ImGui::SFML::ProcessEvent(event);
+        while (const std::optional event = window.pollEvent()) {
+            ImGui::SFML::ProcessEvent(window, *event);
 
-            switch (event.type) {
-                case sf::Event::Closed:
-                    window.close();
-                    break;
+            if (event->is<sf::Event::Closed>()) {
+                window.close();
 
-                case sf::Event::MouseWheelMoved:
-                    mouse_wheel_delta = event.mouseWheel.delta;
-                    break;
+                break;
             }
+
+            if (event->is<sf::Event::MouseWheelScrolled>())
+                mouse_wheel_delta = event->getIf<sf::Event::MouseWheelScrolled>()->delta;
         }
 
         ImGui::SFML::Update(window, delta_clock.restart());
@@ -352,7 +356,7 @@ int main() {
             network = buffered_network;
 
             // Send Caret
-            socket.send(&caret, sizeof(Caret));
+            sf::Socket::Status status = socket.send(&caret, sizeof(Caret));
 
             // Init
             if (layer_CSDR_vis.empty()) {
@@ -415,11 +419,11 @@ int main() {
                 sf::Image w_img;
 
                 if (empty)
-                    w_img.create(1, 1);
+                    w_img = sf::Image(sf::Vector2u(1, 1));
                 else {
                     // If can use RGB for pre-encoder
                     if (field_size.z == 3 && caret.layer < network.num_encs) {
-                        w_img.create(field_size.x, field_size.y, sf::Color::Black);
+                        w_img = sf::Image(sf::Vector2u(field_size.x, field_size.y), sf::Color::Black);
 
                         for (int x = 0; x < w_img.getSize().x; x++)
                             for (int y = 0; y < w_img.getSize().y; y++) {
@@ -431,11 +435,11 @@ int main() {
                                 field_type g = network.fields[i].field[indexG];
                                 field_type b = network.fields[i].field[indexB];
 
-                                w_img.setPixel(x, y, sf::Color(r, g, b));
+                                w_img.setPixel(sf::Vector2u(x, y), sf::Color(r, g, b));
                             }
                     }
                     else { // Seperate channels
-                        w_img.create(field_size.x, field_size.y, sf::Color::Black);
+                        w_img = sf::Image(sf::Vector2u(field_size.x, field_size.y), sf::Color::Black);
 
                         for (int x = 0; x < w_img.getSize().x; x++)
                             for (int y = 0; y < w_img.getSize().y; y++) {
@@ -443,12 +447,12 @@ int main() {
 
                                 field_type value = network.fields[i].field[index];
 
-                                w_img.setPixel(x, y, sf::Color(value, value, value));
+                                w_img.setPixel(sf::Vector2u(x, y), sf::Color(value, value, value));
                             }
                     }
                 }
 
-                field_textures[i].loadFromImage(w_img);
+                field_textures[i] = sf::Texture(w_img);
 
                 field_textures[i].setSmooth(false);
 
@@ -480,7 +484,7 @@ int main() {
             }
         }
 
-        window.setView(sf::View(sf::FloatRect(0.0f, 0.0f, window.getSize().x, window.getSize().y)));
+        window.setView(sf::View(sf::FloatRect(sf::Vector2f(0.0f, 0.0f), sf::Vector2f(window.getSize().x, window.getSize().y))));
 
         window.clear(sf::Color(50, 50, 50));
 
@@ -494,7 +498,7 @@ int main() {
 
         window.resetGLStates();
 
-        ImGui::Render();
+        ImGui::SFML::Render(window);
         window.display();
     }
 

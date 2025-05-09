@@ -6,8 +6,8 @@
 #  in the NEOVIS_LICENSE.md file included in this distribution.
 # ----------------------------------------------------------------------------
 
-# CMake version 3.1+ is required to enable C++14 features cleanly
-cmake_minimum_required(VERSION 3.1)
+# CMake version 3.6+ is required to enable C++14 features cleanly
+cmake_minimum_required(VERSION 3.13)
 
 project(NeoVis)
  
@@ -37,18 +37,18 @@ find_package(OpenGL REQUIRED)
 
 
 ############################################################################
-# Add SFML
+# Find SFML include and libs
 
-find_package(SFML 2 COMPONENTS system window graphics network)
+find_package(SFML 3 COMPONENTS System Window Graphics Network)
 
-message(STATUS "SFML incs: " ${SFML_INCLUDE_DIR})
-message(STATUS "SFML libs: " ${SFML_LIBRARIES})
+include_directories(${SFML_INCLUDE_DIRS})
 
 
 ############################################################################
 #
 
 file(GLOB_RECURSE NEOVIS_SRC
+    "source/*.h"
     "source/*.cpp"
 )
 
@@ -57,16 +57,5 @@ add_executable(NeoVis ${NEOVIS_SRC})
 set_property(TARGET NeoVis PROPERTY CXX_STANDARD 14)
 set_property(TARGET NeoVis PROPERTY CXX_STANDARD_REQUIRED ON)
 
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-    if(BITNESS EQUAL 64)
-        set_target_properties(NeoVis PROPERTIES COMPILE_FLAGS "-m64" LINK_FLAGS "-m64")
-    endif()
-endif()
-
-target_include_directories(NeoVis PUBLIC ${SFML_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR})
-
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-    target_link_libraries(NeoVis ${SFML_LIBRARIES} ${OPENGL_LIBRARIES} ${SFML_DEPENDENCIES} -lpthread)
-else()
-    target_link_libraries(NeoVis ${SFML_LIBRARIES} ${OPENGL_LIBRARIES} ${SFML_DEPENDENCIES})
-endif()
+target_link_libraries(NeoVis SFML::System SFML::Window SFML::Graphics SFML::Network)
+target_link_libraries(NeoVis OpenGL::OpenGL)

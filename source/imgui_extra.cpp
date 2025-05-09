@@ -28,10 +28,10 @@ void ImGui::ImageHover(const sf::Texture &tex, bool &hovering, int &hoverX, int 
 
     if (border_col.w > 0.0f) {
         window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(border_col), 0.0f);
-        window->DrawList->AddImage((void*)tex.getNativeHandle(), bb.Min + ImVec2(1, 1), bb.Max - ImVec2(1, 1), uv0, uv1, GetColorU32(tint_col));
+        window->DrawList->AddImage(tex.getNativeHandle(), bb.Min + ImVec2(1, 1), bb.Max - ImVec2(1, 1), uv0, uv1, GetColorU32(tint_col));
     }
     else
-        window->DrawList->AddImage((void*)tex.getNativeHandle(), bb.Min, bb.Max, uv0, uv1, GetColorU32(tint_col));
+        window->DrawList->AddImage(tex.getNativeHandle(), bb.Min, bb.Max, uv0, uv1, GetColorU32(tint_col));
 
     ImVec2 mousePos = GetMousePos();
 

@@ -149,19 +149,19 @@ void push(std::vector<unsigned char> &data, T value) {
 Vis_Adapter::Vis_Adapter(unsigned short port) {
     listener.setBlocking(false);
 
-    listener.listen(port);
+    sf::Socket::Status status = listener.listen(port);
 }
 
 void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encoder*> &encs) {
     // Check for new connections
     std::unique_ptr<sf::TcpSocket> socket = std::make_unique<sf::TcpSocket>();
 
-    if (listener.accept(*socket) == sf::Socket::Done) {
+    if (listener.accept(*socket) == sf::Socket::Status::Done) {
         socket->setBlocking(false);
 
         clients.push_back(std::move(socket));
 
-        std::cout << "Client connected from " << clients.back()->getRemoteAddress() << std::endl;
+        std::cout << "Client connected from " << *clients.back()->getRemoteAddress() << std::endl;
     }
 
     // Send data to clients
@@ -173,13 +173,13 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
 
         bool disconnected = false;
 
-        if (clients[i]->receive(data.data(), data.size(), size) == sf::Socket::Done) {
+        if (clients[i]->receive(data.data(), data.size(), size) == sf::Socket::Status::Done) {
             // --------------------------- Receive ----------------------------
 
             total_received += size;
             
             while (total_received < data.size()) {
-                if (clients[i]->receive(&data[total_received], data.size() - total_received, size) == sf::Socket::Done)
+                if (clients[i]->receive(&data[total_received], data.size() - total_received, size) == sf::Socket::Status::Done)
                     total_received += size;
                 else
                     sf::sleep(sf::seconds(0.001f));
@@ -188,38 +188,38 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
             caret = *reinterpret_cast<Caret*>(data.data());
 
             // Read away remaining data
-            while (clients[i]->receive(data.data(), data.size(), size) == sf::Socket::Done);
+            while (clients[i]->receive(data.data(), data.size(), size) == sf::Socket::Status::Done);
         }
 
         // ----------------------------- Send -----------------------------
 
         data.clear();
 
-        push<sf::Uint16>(data, static_cast<sf::Uint16>(h.get_num_layers() + encs.size()));
-        push<sf::Uint16>(data, static_cast<sf::Uint16>(encs.size()));
+        push<std::uint16_t>(data, static_cast<std::uint16_t>(h.get_num_layers() + encs.size()));
+        push<std::uint16_t>(data, static_cast<std::uint16_t>(encs.size()));
 
         // Add encoder CSDRs
         for (int j = 0; j < encs.size(); j++) {
             Int3 s = encs[j]->get_hidden_size();
 
-            push<sf::Uint16>(data, static_cast<sf::Uint16>(s.x));
-            push<sf::Uint16>(data, static_cast<sf::Uint16>(s.y));
-            push<sf::Uint16>(data, static_cast<sf::Uint16>(s.z));
+            push<std::uint16_t>(data, static_cast<std::uint16_t>(s.x));
+            push<std::uint16_t>(data, static_cast<std::uint16_t>(s.y));
+            push<std::uint16_t>(data, static_cast<std::uint16_t>(s.z));
 
             for (int k = 0; k < encs[j]->get_hidden_cis().size(); k++)
-                push<sf::Uint16>(data, static_cast<sf::Uint16>(encs[j]->get_hidden_cis()[k]));
+                push<std::uint16_t>(data, static_cast<std::uint16_t>(encs[j]->get_hidden_cis()[k]));
         }
 
         // Add layer SDRs
         for (int j = 0; j < h.get_num_layers(); j++) {
             Int3 s = h.get_encoder(j).get_hidden_size();
 
-            push<sf::Uint16>(data, static_cast<sf::Uint16>(s.x));
-            push<sf::Uint16>(data, static_cast<sf::Uint16>(s.y));
-            push<sf::Uint16>(data, static_cast<sf::Uint16>(s.z));
+            push<std::uint16_t>(data, static_cast<std::uint16_t>(s.x));
+            push<std::uint16_t>(data, static_cast<std::uint16_t>(s.y));
+            push<std::uint16_t>(data, static_cast<std::uint16_t>(s.z));
             
             for (int k = 0; k < h.get_encoder(j).get_hidden_cis().size(); k++)
-                push<sf::Uint16>(data, static_cast<sf::Uint16>(h.get_encoder(j).get_hidden_cis()[k]));
+                push<std::uint16_t>(data, static_cast<std::uint16_t>(h.get_encoder(j).get_hidden_cis()[k]));
         }
 
         int num_fields = 0;
@@ -247,7 +247,7 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
             }
         }
 
-        push<sf::Uint16>(data, static_cast<sf::Uint16>(num_fields));
+        push<std::uint16_t>(data, static_cast<std::uint16_t>(num_fields));
 
         if (layer_index < encs.size()) {
             int enc_index = layer_index;
@@ -269,9 +269,9 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
 
                 get_receptive_field(*enc, j, Int3(caret.pos.x, caret.pos.y, caret.pos.z), field, field_size);
 
-                push<sf::Int32>(data, static_cast<sf::Int32>(field_size.x));
-                push<sf::Int32>(data, static_cast<sf::Int32>(field_size.y));
-                push<sf::Int32>(data, static_cast<sf::Int32>(field_size.z));
+                push<std::int32_t>(data, static_cast<std::int32_t>(field_size.x));
+                push<std::int32_t>(data, static_cast<std::int32_t>(field_size.y));
+                push<std::int32_t>(data, static_cast<std::int32_t>(field_size.z));
             
                 for (int k = 0; k < field.size(); k++)
                     push<unsigned char>(data, field[k]);
@@ -293,9 +293,9 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
 
                 get_encoder_receptive_field(h, layer_index - encs.size(), j, Int3(caret.pos.x, caret.pos.y, caret.pos.z), field, field_size);
 
-                push<sf::Int32>(data, static_cast<sf::Int32>(field_size.x));
-                push<sf::Int32>(data, static_cast<sf::Int32>(field_size.y));
-                push<sf::Int32>(data, static_cast<sf::Int32>(field_size.z));
+                push<std::int32_t>(data, static_cast<std::int32_t>(field_size.x));
+                push<std::int32_t>(data, static_cast<std::int32_t>(field_size.y));
+                push<std::int32_t>(data, static_cast<std::int32_t>(field_size.z));
             
                 for (int k = 0; k < field.size(); k++)
                     push<unsigned char>(data, field[k]);
@@ -308,7 +308,7 @@ void Vis_Adapter::update(const Hierarchy &h, const std::vector<const Image_Encod
         while (total_sent < data.size()) {
             sf::TcpSocket::Status status = clients[i]->send(&data[total_sent], data.size() - total_sent, size);
 
-            if (status == sf::Socket::Disconnected) {
+            if (status == sf::Socket::Status::Disconnected) {
                 std::cout << "Client disconnected." << std::endl;
 
                 clients.erase(clients.begin() + i);
