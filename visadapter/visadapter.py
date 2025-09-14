@@ -122,7 +122,7 @@ class VisAdapter:
                         sdr = encs[l].get_hidden_cis()
 
                         for i in range(width * height):
-                            blayer += struct.pack("H", sdr[i])
+                            blayer += struct.pack("h", sdr[i])
 
                         b += blayer
 
@@ -140,7 +140,7 @@ class VisAdapter:
                         sdr = list(h.get_hidden_cis(l))
 
                         for i in range(width * height):
-                            blayer += struct.pack("H", sdr[i])
+                            blayer += struct.pack("h", sdr[i])
 
                         b += blayer
 
