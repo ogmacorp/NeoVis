@@ -143,7 +143,7 @@ struct Caret {
 
 struct CSDR {
     std::uint16_t width, height, column_size;
-    std::vector<std::uint16_t> indices;
+    std::vector<std::int16_t> indices;
 };
 
 struct Field {
@@ -204,7 +204,7 @@ void receive_thread_func(sf::TcpSocket* socket) {
 
                 buffered_network.csdrs[l].indices.resize(buffered_network.csdrs[l].width * buffered_network.csdrs[l].height);
                 
-                recv(socket, buffered_network.csdrs[l].indices.data(), buffered_network.csdrs[l].indices.size() * sizeof(std::uint16_t));
+                recv(socket, buffered_network.csdrs[l].indices.data(), buffered_network.csdrs[l].indices.size() * sizeof(std::int16_t));
             }
 
             // Number of fields
