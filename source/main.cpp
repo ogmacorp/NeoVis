@@ -443,7 +443,7 @@ int main() {
 
                         for (int x = 0; x < w_img.getSize().x; x++)
                             for (int y = 0; y < w_img.getSize().y; y++) {
-                                int index = field_zs[i] + y * field_size.z + x * field_size.y * field_size.z;
+                                int index = field_zs[i] + field_size.z * (y + field_size.y * x);
 
                                 field_type value = network.fields[i].field[index];
 
