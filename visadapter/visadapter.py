@@ -116,10 +116,12 @@ class VisAdapter:
 
                         blayer += struct.pack("HHH", int(width), int(height), int(column_size))
 
-                        sdr = list(h.get_hidden_cis(l))
+                        tsdr = list(h.get_hidden_states(l))
 
                         for i in range(width * height):
-                            blayer += struct.pack("h", sdr[i])
+                            blayer += struct.pack("f", tsdr[i])
+
+                        blayer += struct.pack("f", float(h.params.layers[l].encoder.falloff))
 
                         b += blayer
 
@@ -152,9 +154,9 @@ class VisAdapter:
 
                         field, field_size = h.get_encoder_receptive_field(layer_index, f, pos)
  
-                        bfield += struct.pack("iii", field_size[0], field_size[1], field_size[2])
+                        bfield += struct.pack("ii", field_size[0], field_size[1])
 
-                        for i in range(field_size[0] * field_size[1] * field_size[2]):
+                        for i in range(field_size[0] * field_size[1]):
                             bfield += struct.pack("B", field[i])
 
                         b += bfield

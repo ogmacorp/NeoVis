@@ -98,9 +98,9 @@ void CSDR_Vis::draw_column(const sf::Vector2f &position, float value, bool isOdd
 
                 sf::Color sub_node_inner_color = highlight ? node_inner_color_highlight : node_inner_color;
 
-                float subIndexValue = (subIndex + 0.5f) * column_size;
+                float valueIndex = value * (column_size - 1);
 
-                inner.setFillColor(sf::Color(sub_node_inner_color.r, sub_node_inner_color.g, sub_node_inner_color.b, static_cast<std::uint8_t>(std::max(0.0f, 1.0f - std::abs(subIndexValue - value) * falloff) * 255.0f)));
+                inner.setFillColor(sf::Color(sub_node_inner_color.r, sub_node_inner_color.g, sub_node_inner_color.b, static_cast<std::uint8_t>(std::max(0.0f, 1.0f - std::abs(subIndex - valueIndex) * falloff) * 255.0f)));
 
                 rt->draw(inner);
             }
