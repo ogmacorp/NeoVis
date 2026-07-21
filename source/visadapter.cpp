@@ -122,7 +122,7 @@ void get_encoder_receptive_field(
             for (int vc = 0; vc < vld.size.z; vc++) {
                 int wi = pos.z + hidden_size.z * (offset.y + diam * (offset.x + diam * (vc + vld.size.z * hidden_column_index)));
 
-                field[vc + vld.size.z * (offset.y + diam * offset.x)] = vl.weights[wi];
+                field[vc + vld.size.z * (offset.y + diam * offset.x)] = vl.protos[wi];
             }
         }
 
