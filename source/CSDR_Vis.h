@@ -17,12 +17,12 @@ class CSDR_Vis {
 private:
     std::shared_ptr<sf::RenderTexture> rt;
 
-    std::vector<int> columns;
+    std::vector<float> columns;
 
     int width, height, column_size;
     int root_column_size;
 
-    void draw_column(const sf::Vector2f &position, int index, bool isOdd, int cx, int cy);
+    void draw_column(const sf::Vector2f &position, float value, bool isOdd, int cx, int cy);
 
     sf::Vector3i highlighted_CSDR_pos;
 
@@ -45,22 +45,25 @@ public:
 
     int highlight_x, highlight_y;
 
+    float falloff;
+
     CSDR_Vis()
         : edge_radius(2.0f), node_space_size(8.0f), node_outer_ratio(0.85f), node_inner_ratio(0.75f),
         edge_segments(16), node_outer_segments(16), node_inner_segments(16),
         background_color0(98, 98, 98), background_color1(168, 168, 168), node_outer_color(64, 64, 64), node_inner_color(255, 0, 0),
         node_inner_color_highlight(0, 255, 0),
         highlight_x(-1), highlight_y(-1),
-        highlighted_CSDR_pos(-1, -1, -1)
+        highlighted_CSDR_pos(-1, -1, -1),
+        falloff(0.5f)
     {}
 
     void init(int width, int height, int column_size);
 
-    int &operator[](int index) {
+    float &operator[](int index) {
         return columns[index];
     }
 
-    int &at(int x, int y) {
+    float &at(int x, int y) {
         return columns[y + x * height];
     }
 

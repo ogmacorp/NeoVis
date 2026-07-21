@@ -143,20 +143,19 @@ struct Caret {
 
 struct CSDR {
     std::uint16_t width, height, column_size;
-    std::vector<std::int16_t> indices;
+    std::vector<float> values;
+    float falloff;
 };
 
 struct Field {
     std::array<char, 64> name;
     std::int32_t field_size_x;
     std::int32_t field_size_y;
-    std::int32_t field_size_z;
     std::vector<field_type> field;
 };
 
 struct Network {
     std::uint16_t num_layers;
-    std::uint16_t num_encs; // Number of layers that are encodeers
     std::vector<CSDR> csdrs;
 
     std::vector<Field> fields;
@@ -193,7 +192,6 @@ bool recv(sf::TcpSocket* socket, void* data, int size) {
 void receive_thread_func(sf::TcpSocket* socket) {
     while (!stop_receiving) {
         if (recv(socket, &buffered_network.num_layers, sizeof(std::uint16_t))) {
-            recv(socket, &buffered_network.num_encs, sizeof(std::uint16_t));
 
             buffered_network.csdrs.resize(buffered_network.num_layers);
 
@@ -202,9 +200,11 @@ void receive_thread_func(sf::TcpSocket* socket) {
                 recv(socket, &buffered_network.csdrs[l].height, sizeof(std::uint16_t));
                 recv(socket, &buffered_network.csdrs[l].column_size, sizeof(std::uint16_t));
 
-                buffered_network.csdrs[l].indices.resize(buffered_network.csdrs[l].width * buffered_network.csdrs[l].height);
+                buffered_network.csdrs[l].values.resize(buffered_network.csdrs[l].width * buffered_network.csdrs[l].height);
                 
-                recv(socket, buffered_network.csdrs[l].indices.data(), buffered_network.csdrs[l].indices.size() * sizeof(std::int16_t));
+                recv(socket, buffered_network.csdrs[l].values.data(), buffered_network.csdrs[l].values.size() * sizeof(float));
+
+                recv(socket, &buffered_network.csdrs[l].falloff, sizeof(float));
             }
 
             // Number of fields
@@ -218,9 +218,8 @@ void receive_thread_func(sf::TcpSocket* socket) {
                 recv(socket, &buffered_network.fields[f].name, sizeof(buffered_network.fields[f].name));
                 recv(socket, &buffered_network.fields[f].field_size_x, sizeof(std::int32_t));
                 recv(socket, &buffered_network.fields[f].field_size_y, sizeof(std::int32_t));
-                recv(socket, &buffered_network.fields[f].field_size_z, sizeof(std::int32_t));
 
-                buffered_network.fields[f].field.resize(buffered_network.fields[f].field_size_x * buffered_network.fields[f].field_size_y * buffered_network.fields[f].field_size_z);
+                buffered_network.fields[f].field.resize(buffered_network.fields[f].field_size_x * buffered_network.fields[f].field_size_y);
                 recv(socket, buffered_network.fields[f].field.data(), buffered_network.fields[f].field.size() * sizeof(field_type));
             }
         }
@@ -262,7 +261,6 @@ int main() {
 
     std::vector<CSDR_Vis> layer_CSDR_vis;
     std::vector<sf::Texture> field_textures;
-    std::vector<int> field_zs;
 
     sf::TcpSocket socket;
 
@@ -370,15 +368,14 @@ int main() {
             for (int l = 0; l < network.num_layers; l++) {
                 CSDR &csdr = network.csdrs[l];
 
-                for (int i = 0; i < csdr.indices.size(); i++)
-                    layer_CSDR_vis[l][i] = csdr.indices[i];
+                for (int i = 0; i < csdr.values.size(); i++)
+                    layer_CSDR_vis[l][i] = csdr.values[i];
+
+                layer_CSDR_vis[l].falloff = csdr.falloff;
 
                 layer_CSDR_vis[l].draw();
 
-                if (l < network.num_encs)
-                    ImGui::Begin(("Pre-encoder " + std::to_string(l)).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-                else
-                    ImGui::Begin(("Layer " + std::to_string(l - network.num_encs)).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+                ImGui::Begin(("Layer " + std::to_string(l)).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
                 bool hovering;
                 int hover_x = -1;
@@ -406,50 +403,27 @@ int main() {
 
             // Show contents of caret position
             field_textures.resize(network.fields.size());
-            field_zs.resize(network.fields.size(), 0);
 
             for (int i = 0; i < network.fields.size(); i++) {
-                sf::Vector3i field_size = sf::Vector3i(network.fields[i].field_size_x, network.fields[i].field_size_y, network.fields[i].field_size_z);
+                sf::Vector2i field_size = sf::Vector2i(network.fields[i].field_size_x, network.fields[i].field_size_y);
 
-                // Make sure is in range
-                field_zs[i] = std::min(field_size.z - 1, std::max(0, field_zs[i]));
-
-                int empty = (field_size.x * field_size.y * field_size.z) == 0;
+                int empty = (field_size.x * field_size.y) == 0;
 
                 sf::Image w_img;
 
                 if (empty)
                     w_img = sf::Image(sf::Vector2u(1, 1));
                 else {
-                    // If can use RGB for pre-encoder
-                    if (field_size.z == 3 && caret.layer < network.num_encs) {
-                        w_img = sf::Image(sf::Vector2u(field_size.x, field_size.y), sf::Color::Black);
+                    w_img = sf::Image(sf::Vector2u(field_size.x, field_size.y), sf::Color::Black);
 
-                        for (int x = 0; x < w_img.getSize().x; x++)
-                            for (int y = 0; y < w_img.getSize().y; y++) {
-                                int indexR = 0 + 3 * (y + field_size.y * x);
-                                int indexG = 1 + 3 * (y + field_size.y * x);
-                                int indexB = 2 + 3 * (y + field_size.y * x);
+                    for (int x = 0; x < w_img.getSize().x; x++)
+                        for (int y = 0; y < w_img.getSize().y; y++) {
+                            int index = y + field_size.y * x;
 
-                                field_type r = network.fields[i].field[indexR];
-                                field_type g = network.fields[i].field[indexG];
-                                field_type b = network.fields[i].field[indexB];
+                            field_type value = network.fields[i].field[index];
 
-                                w_img.setPixel(sf::Vector2u(x, y), sf::Color(r, g, b));
-                            }
-                    }
-                    else { // Seperate channels
-                        w_img = sf::Image(sf::Vector2u(field_size.x, field_size.y), sf::Color::Black);
-
-                        for (int x = 0; x < w_img.getSize().x; x++)
-                            for (int y = 0; y < w_img.getSize().y; y++) {
-                                int index = field_zs[i] + field_size.z * (y + field_size.y * x);
-
-                                field_type value = network.fields[i].field[index];
-
-                                w_img.setPixel(sf::Vector2u(x, y), sf::Color(value, value, value));
-                            }
-                    }
+                            w_img.setPixel(sf::Vector2u(x, y), sf::Color(value, value, value));
+                        }
                 }
 
                 field_textures[i] = sf::Texture(w_img);
@@ -467,15 +441,9 @@ int main() {
                 ImGui::ImageHover(field_textures[i], hovering, hover_x, hover_y, ImVec2(8.0f * w_img.getSize().x, 8.0f * w_img.getSize().y));
 
                 if (hovering) {
-                    // Select field Z
-                    field_zs[i] = std::min(network.fields[i].field_size_z - 1, std::max(0, field_zs[i] + mouse_wheel_delta));
-
                     ImGui::BeginTooltip();
 
-                    if ((network.fields[i].field_size_z == 3 || network.fields[i].field_size_z == 6) && caret.layer < network.num_encs)
-                        ImGui::SetTooltip("RGB");
-                    else
-                        ImGui::SetTooltip(("Z: " + std::to_string(field_zs[i])).c_str());
+                    ImGui::SetTooltip(("Val: " + std::to_string(network.fields[i].field[hover_y + hover_x * field_size.y] / 255.0f)).c_str());
 
                     ImGui::EndTooltip();
                 }

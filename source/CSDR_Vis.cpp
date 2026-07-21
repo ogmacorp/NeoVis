@@ -16,14 +16,14 @@ void CSDR_Vis::init(int width, int height, int column_size) {
 
     root_column_size = std::ceil(std::sqrt(static_cast<float>(column_size)));
 
-    columns.resize(width * height, 0);
+    columns.resize(width * height, 0.5f);
 
     float r_size = node_space_size * root_column_size;
 
     rt = std::make_unique<sf::RenderTexture>(sf::Vector2u(static_cast<int>(std::ceil(width * r_size)), static_cast<int>(std::ceil(height * r_size))));
 }
 
-void CSDR_Vis::draw_column(const sf::Vector2f &position, int index, bool isOdd, int cx, int cy) {
+void CSDR_Vis::draw_column(const sf::Vector2f &position, float value, bool isOdd, int cx, int cy) {
     float r_size = node_space_size * root_column_size;
 
     sf::Color backgroundColor = isOdd ? background_color1 : background_color0;
@@ -98,7 +98,9 @@ void CSDR_Vis::draw_column(const sf::Vector2f &position, int index, bool isOdd, 
 
                 sf::Color sub_node_inner_color = highlight ? node_inner_color_highlight : node_inner_color;
 
-                inner.setFillColor(sf::Color(sub_node_inner_color.r, sub_node_inner_color.g, sub_node_inner_color.b, subIndex == index || highlight ? 255 : 0));
+                float subIndexValue = (subIndex + 0.5f) * column_size;
+
+                inner.setFillColor(sf::Color(sub_node_inner_color.r, sub_node_inner_color.g, sub_node_inner_color.b, static_cast<std::uint8_t>(std::max(0.0f, 1.0f - std::abs(subIndexValue - value) * falloff) * 255.0f)));
 
                 rt->draw(inner);
             }
